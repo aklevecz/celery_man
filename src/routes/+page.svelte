@@ -1,11 +1,118 @@
 <script>
-	import { windowManager } from '$lib/window-manager.svelte.js';
-	import WindowManager from '$lib/components/WindowManager.svelte';
+	import { fetchUrl } from '$lib';
+	import { websocketClient } from '$lib/websocket-client';
+	import { queuePrompt } from '$lib/comfy-api';
 	import Calculator from '$lib/components/Calculator.svelte';
-	import CincoIdentityGenerator from '$lib/components/cinco-identity-generator.svelte';
-	import GoodMorningPaul from '$lib/components/good-morning-paul.svelte';
 	import Camera from '$lib/components/Camera.svelte';
+	import CincoIdentityGenerator from '$lib/components/CincoIdentityGenerator.svelte';
+	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
+	import SpeechTranscriber from '$lib/components/SpeechTranscriber.svelte';
+	import WindowManager from '$lib/components/WindowManager.svelte';
+	import { celeryMan } from '$lib/prompts';
+	import { windowManager } from '$lib/window-manager.svelte.js';
+	import { onMount } from 'svelte';
 
+	let backgroundImage = $state(null);
+	let backgroundPreview = $state('');
+	let isLoading = $state(false);
+	let loadingStage = $state('');
+	let progress = $state(0);
+
+	let imagePreviews = $state([]);
+
+	let textFeedback = $state('');
+
+	let promptType = $state('background');
+	/** @param {*} message */
+	function handleWebSocketMessage(message) {
+		switch (message.type) {
+			case 'status':
+				console.log('Status event:', message.data);
+				break;
+			case 'execution_start':
+				console.log('Execution started:', message.data);
+				isLoading = true;
+				loadingStage = 'Starting generation...';
+				progress = 0;
+				break;
+			case 'executing':
+				console.log('Currently executing node:', message.data);
+				loadingStage = 'Processing image...';
+				progress = 25;
+				break;
+			case 'progress':
+				console.log('Progress:', message.data);
+				if (message.data.value && message.data.max) {
+					progress = Math.round((message.data.value / message.data.max) * 100);
+					loadingStage = `Generating... ${progress}%`;
+				}
+				break;
+			case 'executed':
+				console.log('Node executed:', message.data);
+				loadingStage = 'Finalizing...';
+				progress = 90;
+				const output = message.data.output;
+				if (output.gifs) {
+					const gifs = output.gifs;
+					const filename = gifs[0].filename;
+					const subfolder = gifs[0].subfolder;
+					const type = gifs[0].type;
+					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
+                    testImg.src = url
+				}
+				if (output.images) {
+					const images = message.data.output.images;
+					const filename = images[0].filename;
+					const subfolder = images[0].subfolder;
+					const type = images[0].type;
+					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
+					if (promptType === 'background') {
+						// const img = new Image();
+						// img.crossOrigin = 'anonymous'; // Enable CORS for canvas export
+						// img.onload = () => {
+						// 	backgroundImage = img;
+						// };
+						// img.src = url;
+						// backgroundPreview = url;
+						// saveToLocalStorage();
+					}
+
+					if (promptType === 'product') {
+						// galleryStore.setLastGenerated(url);
+					}
+					imagePreviews = [...imagePreviews, url];
+					// galleryStore.addImage(url);
+				} else if (output.text) {
+					// console.log(output.text);
+					// const text = output.text;
+					// textPreview = text.join(' ');
+				}
+				break;
+			case 'execution_success':
+				console.log('Execution completed successfully');
+				isLoading = false;
+				loadingStage = '';
+				progress = 100;
+				// Refresh gallery after successful generation
+				// galleryStore.loadHistory();
+				break;
+			case 'execution_error':
+				console.error('Execution failed:', message.data);
+				alert(message.data.message || message.data.exception_message);
+				isLoading = false;
+				loadingStage = 'Generation failed';
+				progress = 0;
+				break;
+			case 'text':
+				textFeedback = message.data;
+				break;
+		}
+	}
+
+	onMount(() => {
+		websocketClient.connect();
+		websocketClient.setMessageHandler(handleWebSocketMessage);
+	});
 	function openNotepad() {
 		windowManager.createWindow({
 			id: 'notepad',
@@ -136,10 +243,30 @@
 			}
 		});
 	}
+
+	function openSpeechTranscriber() {
+		windowManager.createWindow({
+			id: 'speech-transcriber',
+			title: 'Speech Transcriber',
+			width: 450,
+			height: 500,
+			x: 250,
+			y: 50,
+			content: {
+				component: SpeechTranscriber,
+				props: {}
+			}
+		});
+	}
+	let testImg = $state();
 </script>
 
 <div class="desktop">
 	<div class="desktop-icons">
+		<div class="icon" onclick={openSpeechTranscriber}>
+			<div class="icon-image">🎤</div>
+			<div class="icon-label">Speech Transcriber</div>
+		</div>
 		<div class="icon" onclick={openCamera}>
 			<div class="icon-image">📹</div>
 			<div class="icon-label">Camera</div>

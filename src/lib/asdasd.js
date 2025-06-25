@@ -3,8 +3,8 @@ import { websocketUrl } from '$lib';
 class WebSocketClient {
 	constructor() {
 		this.ws = null;
-		this.clientId = 'your-client-id-' + Math.random();
-		this.connectionStatus = 'disconnected';
+		this.clientId = 'your-client-id-' + Math.random();;
+		this.connectionStatus = 'disconnected'
 		this.isConnecting = false;
 		this.onMessage = null;
 		this.reconnectAttempts = 0;
@@ -16,6 +16,7 @@ class WebSocketClient {
 		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
 			return;
 		}
+
 		this.isConnecting = true;
 		this.ws = new WebSocket(`${websocketUrl}/ws?clientId=${this.clientId}`);
 
@@ -24,6 +25,7 @@ class WebSocketClient {
 			this.connectionStatus = 'connected';
 			this.isConnecting = false;
 			this.reconnectAttempts = 0;
+			
 			// Store clientId globally for other parts of the app
 			if (typeof window !== 'undefined' && this.clientId) {
 				window.comfyClientId = this.clientId;
@@ -44,52 +46,11 @@ class WebSocketClient {
 		});
 
 		this.ws.addEventListener('message', (event) => {
-			// Handle string messages (JSON)
-			if (typeof event.data === 'string') {
-				try {
-					const message = JSON.parse(event.data);
-					if (message.type === 'crystools.monitor') {
-						return
-					}
-					console.log('JSON message:', message);
-					if (this.onMessage) {
-						this.onMessage(message);
-					}
-				} catch (error) {
-					console.error('Error parsing JSON message:', error);
-				}
-			}
-			// Handle binary messages (Blobs - usually images)
-			else if (event.data instanceof Blob) {
-				console.log('Blob size:', event.data.size, 'bytes');
-				console.log('Blob type:', event.data.type);
-
-				// Option 1: Parse as text (for JSON, CSV, XML, plain text, etc.)
-				event.data
-					.text()
-					.then((textData) => {
-						console.log('Blob as text:', textData);
-
-						// Try parsing as JSON
-						try {
-							const jsonData = JSON.parse(textData);
-							console.log('Blob contained JSON:', jsonData);
-							if (this.onMessage) {
-								this.onMessage(jsonData);
-							}
-						} catch (error) {
-							// Not JSON, handle as plain text or other format
-							console.log('Blob is plain text or other format:', textData);
-							if (this.onMessage) {
-								this.onMessage({ type: 'text', data: textData });
-							}
-						}
-					})
-					.catch((error) => {
-						console.error('Error reading blob as text:', error);
-					});
-			} else {
-				console.log('Unknown message type:', typeof event.data, event.data);
+			const message = JSON.parse(event.data);
+			console.log('Full message:', message);
+			
+			if (this.onMessage) {
+				this.onMessage(message);
 			}
 		});
 	}
@@ -98,6 +59,7 @@ class WebSocketClient {
 		if (this.reconnectAttempts < this.maxReconnectAttempts) {
 			this.reconnectAttempts++;
 			this.connectionStatus = 'reconnecting';
+			
 			setTimeout(() => {
 				console.log(`Reconnection attempt ${this.reconnectAttempts}`);
 				this.connect();
@@ -114,8 +76,13 @@ class WebSocketClient {
 			this.ws = null;
 		}
 		this.connectionStatus = 'disconnected';
+		// this.clientId = null;
 	}
 
+	/**
+	 * Sets the handler for WebSocket messages
+	 * @param {Function} handler - Message handler function, called with the message object as argument
+	 */
 	setMessageHandler(handler) {
 		this.onMessage = handler;
 	}
