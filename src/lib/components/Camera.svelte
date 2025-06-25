@@ -4,6 +4,7 @@
 	const { FaceDetection } = pkg;
 	import pkg2 from '@mediapipe/camera_utils';
 	const { Camera } = pkg2;
+	import { queuePrompt } from '$lib/comfy-api';
 	let videoElement;
 	let canvasElement;
 	let stream = null;
@@ -208,6 +209,103 @@
 		document.body.removeChild(link);
 	}
 
+	async function sendFaceToPrompt() {
+		if (detectedFaces.length === 0 || !videoElement) {
+			alert('No face detected. Please enable face detection first.');
+			return;
+		}
+
+		try {
+			const face = detectedFaces[0]; // Use first detected face
+			console.log('Face coordinates:', face);
+
+			// Add some padding around the face (10% on each side)
+			const padding = 0.1;
+			const paddedX = Math.max(0, face.x - face.width * padding);
+			const paddedY = Math.max(0, face.y - face.height * padding);
+			const paddedWidth = Math.min(videoElement.videoWidth - paddedX, face.width * (1 + 2 * padding));
+			const paddedHeight = Math.min(videoElement.videoHeight - paddedY, face.height * (1 + 2 * padding));
+
+			console.log('Padded face area:', { 
+				x: paddedX, 
+				y: paddedY, 
+				width: paddedWidth, 
+				height: paddedHeight 
+			});
+
+			// Create a canvas for the cropped face (ONLY the face area)
+			const croppedCanvas = document.createElement('canvas');
+			const croppedCtx = croppedCanvas.getContext('2d');
+
+			// Set cropped canvas size to ONLY the face area
+			croppedCanvas.width = paddedWidth;
+			croppedCanvas.height = paddedHeight;
+
+			console.log('Cropped canvas size:', croppedCanvas.width, 'x', croppedCanvas.height);
+
+			// Draw ONLY the face area directly from the video element
+			croppedCtx.drawImage(
+				videoElement,
+				paddedX, paddedY, paddedWidth, paddedHeight,  // Source area (face region)
+				0, 0, paddedWidth, paddedHeight               // Destination (full cropped canvas)
+			);
+
+			// Convert canvas to blob
+			const blob = await new Promise(resolve => {
+				croppedCanvas.toBlob(resolve, 'image/png');
+			});
+
+			console.log('Blob size:', blob.size, 'bytes');
+
+			// Send to prompt system
+			await queuePrompt({ 
+				imageBlob: blob,
+				prompt: 'Cropped face from camera'
+			});
+
+			console.log('Cropped face sent to prompt successfully');
+
+		} catch (error) {
+			console.error('Error sending face to prompt:', error);
+			alert('Failed to send face to prompt: ' + error.message);
+		}
+	}
+
+	async function takeScreenshot() {
+		if (!videoElement) {
+			alert('No video feed available');
+			return;
+		}
+
+		try {
+			// Create a canvas to capture the current video frame
+			const canvas = document.createElement('canvas');
+			const ctx = canvas.getContext('2d');
+			canvas.width = videoElement.videoWidth;
+			canvas.height = videoElement.videoHeight;
+
+			// Draw current video frame
+			ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+			// Convert canvas to blob
+			const blob = await new Promise(resolve => {
+				canvas.toBlob(resolve, 'image/png');
+			});
+
+			// Send to prompt system
+			await queuePrompt({ 
+				imageBlob: blob,
+				prompt: 'Screenshot from camera'
+			});
+
+			console.log('Screenshot sent to prompt successfully');
+
+		} catch (error) {
+			console.error('Error sending screenshot to prompt:', error);
+			alert('Failed to send image to prompt: ' + error.message);
+		}
+	}
+
 	onMount(async () => {
 		await initFaceDetection();
 		await startCamera();
@@ -223,12 +321,13 @@
 		<span class="title">📹 Camera Feed</span>
 		<div class="controls">
 			{#if isActive}
-				<button class="btn" onclick={takeScreenshot}>Send Image</button>
+				<button class="btn" onclick={takeScreenshot}>📸 Send Image</button>
 				<button class="btn" onclick={toggleFaceDetection} disabled={!modelsLoaded}>
 					{faceDetectionEnabled ? 'Hide Faces' : 'Detect Faces'}
 				</button>
 				{#if detectedFaces.length > 0}
-					<button class="btn" onclick={cropFace}>Crop Face</button>
+					<button class="btn send-face-btn" onclick={sendFaceToPrompt}>🎯 Send Face</button>
+					<button class="btn" onclick={cropFace}>💾 Download Face</button>
 				{/if}
 				<button class="btn" onclick={stopCamera}>Stop</button>
 			{:else}
@@ -333,6 +432,15 @@
 	.btn:disabled {
 		color: #808080;
 		cursor: not-allowed;
+	}
+	
+	.send-face-btn {
+		background: #ffeeaa !important;
+		border-color: #ddcc88 !important;
+	}
+	
+	.send-face-btn:hover:not(:disabled) {
+		background: #ffdd88 !important;
 	}
 
 	.video-area {

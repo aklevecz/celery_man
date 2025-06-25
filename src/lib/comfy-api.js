@@ -50,6 +50,7 @@ async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '
 	// If we have an image, upload it first and get the filename
 	if (imageBlob) {
 		try {
+			console.log('Uploading image...');
 			const uploadedFilename = await uploadImage(imageBlob);
 			workflow['2']['inputs']['image'] = uploadedFilename;
 		} catch (error) {
@@ -68,7 +69,7 @@ async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '
 		// }
 	};
 	console.log(`Sending prompt: ${JSON.stringify(p)}`);
-	
+
 	const response = await fetch(`${fetchUrl}/prompt`, {
 		method: 'POST',
 		headers: {
