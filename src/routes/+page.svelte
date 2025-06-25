@@ -58,34 +58,26 @@
 					const subfolder = gifs[0].subfolder;
 					const type = gifs[0].type;
 					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
-                    testImg.src = url
-				}
-				if (output.images) {
-					const images = message.data.output.images;
-					const filename = images[0].filename;
-					const subfolder = images[0].subfolder;
-					const type = images[0].type;
-					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
-					if (promptType === 'background') {
-						// const img = new Image();
-						// img.crossOrigin = 'anonymous'; // Enable CORS for canvas export
-						// img.onload = () => {
-						// 	backgroundImage = img;
-						// };
-						// img.src = url;
-						// backgroundPreview = url;
-						// saveToLocalStorage();
+					
+					// Open a window to display the GIF
+					windowManager.createWindow({
+						id: `gif-${Date.now()}`, // Unique ID for each GIF
+						title: `Generated GIF - ${filename}`,
+						width: 400,
+						height: 400,
+						x: 100 + Math.random() * 200, // Random position
+						y: 100 + Math.random() * 200,
+						content: `
+							<div style="padding: 8px; text-align: center; background: white; height: 100%;">
+								<img src="${url}" alt="Generated GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+							</div>
+						`
+					});
+					
+					// Still set testImg for any other usage
+					if (testImg) {
+						testImg.src = url;
 					}
-
-					if (promptType === 'product') {
-						// galleryStore.setLastGenerated(url);
-					}
-					imagePreviews = [...imagePreviews, url];
-					// galleryStore.addImage(url);
-				} else if (output.text) {
-					// console.log(output.text);
-					// const text = output.text;
-					// textPreview = text.join(' ');
 				}
 				break;
 			case 'execution_success':

@@ -16,6 +16,9 @@
 	let faceDetection = null;
 	let camera = null;
 	let modelsLoaded = $state(false);
+	let lastCapturedBlob = $state(null);
+	let lastCapturedType = $state(''); // 'face' or 'screenshot'
+	let lastCapturedTimestamp = $state('');
 
 	async function initFaceDetection() {
 		try {
@@ -257,6 +260,11 @@
 
 			console.log('Blob size:', blob.size, 'bytes');
 
+			// Cache the captured face
+			lastCapturedBlob = blob;
+			lastCapturedType = 'face';
+			lastCapturedTimestamp = new Date().toLocaleTimeString();
+
 			// Send to prompt system
 			await queuePrompt({ 
 				imageBlob: blob,
@@ -292,6 +300,11 @@
 				canvas.toBlob(resolve, 'image/png');
 			});
 
+			// Cache the captured screenshot
+			lastCapturedBlob = blob;
+			lastCapturedType = 'screenshot';
+			lastCapturedTimestamp = new Date().toLocaleTimeString();
+
 			// Send to prompt system
 			await queuePrompt({ 
 				imageBlob: blob,
@@ -303,6 +316,28 @@
 		} catch (error) {
 			console.error('Error sending screenshot to prompt:', error);
 			alert('Failed to send image to prompt: ' + error.message);
+		}
+	}
+
+	async function resendLastImage() {
+		if (!lastCapturedBlob) {
+			alert('No cached image available. Take a photo or capture a face first.');
+			return;
+		}
+
+		try {
+			const promptText = lastCapturedType === 'face' ? 'Resending cached face' : 'Resending cached screenshot';
+			
+			await queuePrompt({ 
+				imageBlob: lastCapturedBlob,
+				prompt: promptText
+			});
+
+			console.log(`Resent cached ${lastCapturedType} successfully`);
+
+		} catch (error) {
+			console.error('Error resending cached image:', error);
+			alert('Failed to resend cached image: ' + error.message);
 		}
 	}
 
@@ -329,6 +364,9 @@
 					<button class="btn send-face-btn" onclick={sendFaceToPrompt}>🎯 Send Face</button>
 					<button class="btn" onclick={cropFace}>💾 Download Face</button>
 				{/if}
+				{#if lastCapturedBlob}
+					<button class="btn resend-btn" onclick={resendLastImage}>🔄 Resend Last</button>
+				{/if}
 				<button class="btn" onclick={stopCamera}>Stop</button>
 			{:else}
 				<button class="btn" onclick={startCamera} disabled={isLoading}>
@@ -337,6 +375,15 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if lastCapturedBlob}
+		<div class="cache-info">
+			<span class="cache-label">📦 Cached:</span>
+			<span class="cache-details">
+				{lastCapturedType} at {lastCapturedTimestamp}
+			</span>
+		</div>
+	{/if}
 
 	<div class="video-area">
 		{#if error}
@@ -441,6 +488,35 @@
 	
 	.send-face-btn:hover:not(:disabled) {
 		background: #ffdd88 !important;
+	}
+	
+	.resend-btn {
+		background: #eeffaa !important;
+		border-color: #ccdd88 !important;
+	}
+	
+	.resend-btn:hover:not(:disabled) {
+		background: #ddff88 !important;
+	}
+	
+	.cache-info {
+		background: #f0f0f0;
+		padding: 4px 8px;
+		border-bottom: 1px inset #c0c0c0;
+		font-size: 10px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	
+	.cache-label {
+		font-weight: bold;
+		color: #666;
+	}
+	
+	.cache-details {
+		color: #888;
+		font-style: italic;
 	}
 
 	.video-area {

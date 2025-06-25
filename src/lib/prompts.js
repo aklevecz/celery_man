@@ -139,7 +139,7 @@ const celeryMan = {
 	},
 	5: {
 		inputs: {
-			video: 'oyster_2.mp4',
+			video: 'celeryman_dance_4.mp4',
 			force_rate: 0,
 			custom_width: 0,
 			custom_height: 0,
