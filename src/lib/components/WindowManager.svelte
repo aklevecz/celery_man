@@ -31,7 +31,6 @@
 		isMaximized={window.isMaximized}
 	>
 		{#if typeof window.content === 'string'}
-		<div>hello</div>
 			<div>{@html window.content}</div>
 		{:else if window.content && typeof window.content === 'object' && window.content.component}
 			<svelte:component this={window.content.component} {...window.content.props || {}} />

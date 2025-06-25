@@ -37,15 +37,16 @@ async function uploadImage(imageBlob, filename = 'canvas_image.png') {
  *
  * @param {Object} params - The parameters for the queue prompt.
  * @param {*} [params.workflow=flow] - The workflow configuration to be sent.
- * @param {Blob} [params.imageBlob] - An optional image blob to be uploaded.
- * @param {string} params.prompt - The prompt to be included in the workflow.
+ * @param {Blob | null} [params.imageBlob] - An optional image blob to be uploaded.
+ * @param {string} [params.prompt] - The prompt to be included in the workflow.
+ * @param {string} [params.dancer] - The dancer to be included in the workflow.
  *
  * @returns {Promise<Response>} - The response from the server after queuing the prompt.
  *
  * @throws {Error} - Throws an error if the image upload or fetch request fails.
  */
 
-async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '' }) {
+async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '', dancer = 'celeryman' } = {}) {
 	console.log("running queue")
 	// If we have an image, upload it first and get the filename
 	if (imageBlob) {
@@ -61,6 +62,8 @@ async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '
 
 	// workflow['5']['inputs'].prompt = prompt;
 	// workflow['5']['inputs'].seed = Math.floor(Math.random() * 1000000);
+	const randomNumberBetween1And4 = Math.floor(Math.random() * 2) + 1;
+	workflow['5'].inputs.video = `${dancer}_dance_${randomNumberBetween1And4}.mp4`;
 	const p = {
 		prompt: workflow,
 		client_id: window.comfyClientId,
