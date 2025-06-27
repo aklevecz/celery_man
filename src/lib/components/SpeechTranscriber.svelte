@@ -2,6 +2,7 @@
 	import agent from '$lib/agent.svelte';
 	import { queuePrompt } from '$lib/comfy-api';
 	import { celeryMan } from '$lib/prompts';
+	import { userStore } from '$lib/user.svelte.js';
 	import { onDestroy, onMount } from 'svelte';
 
 	let recognition = null;
@@ -11,6 +12,7 @@
 	let interimTranscript = $state('');
 	let error = $state('');
 	let isSupported = $state(false);
+	let isProcessingStop = $state(false);
 
 	// Check if speech recognition is supported
 	onMount(() => {
@@ -63,6 +65,13 @@
 			// Combine final and interim for display
 			const displayText = finalTranscript + (interim ? ' ' + interim : '');
 			transcription = displayText;
+
+			// Check for "please" trigger only once
+			if (!isProcessingStop && transcription.toLowerCase().includes('please')) {
+				// isProcessingStop = true;
+				recognition.stop();
+				stopListening();
+			}
 		};
 
 		recognition.onerror = (event) => {
@@ -88,6 +97,7 @@
 			interimTranscript = '';
 			transcription = '';
 			error = '';
+			isProcessingStop = false; // Reset the flag
 			recognition.start();
 		} catch (err) {
 			console.error('Error starting recognition:', err);
@@ -96,17 +106,83 @@
 	}
 
 	async function stopListening() {
+		console.log('calling stop listening');
+
+		// Prevent multiple calls
+		if (isProcessingStop) {
+			console.log('Already processing stop, ignoring duplicate call');
+			return;
+		}
+
+		isProcessingStop = true;
+
 		if (recognition && isListening) {
 			recognition.stop();
 		}
+
 		const audio = document.getElementById('yes-paul');
-		audio.play();
-		function callback(dancer) {
-			console.log(`Dancer: ${dancer}`);
-			queuePrompt({ workflow: celeryMan, dancer });
+		if (audio) {
+			// audio.play();
 		}
-		console.log(`Final transcript: ${finalTranscript}`);
-		agent.sendChatMessage(finalTranscript, callback);
+		// function callback(dancer) {
+		// 	console.log(`Dancer: ${dancer}`);
+		// 	queuePrompt({ workflow: celeryMan, dancer });
+		// }
+		console.log(`Final transcript: ${transcription}`);
+		const { dancer, danceType, modelResponse } = await agent.sendChatMessage(transcription);
+
+		if (modelResponse) {
+			// Use the browser Speech Synthesis API with Eddy en-US voice
+			const speak = () => {
+				const utterance = new SpeechSynthesisUtterance(modelResponse);
+
+				// Get available voices and find Eddy en-US
+				const voices = speechSynthesis.getVoices();
+				const eddyVoice =
+					voices.find(
+						(voice) => voice.name.toLowerCase().includes('eddy') && voice.lang === 'en-US'
+					) || voices.find((voice) => voice.lang === 'en-US'); // Fallback to any en-US voice
+
+				if (eddyVoice) {
+					utterance.voice = eddyVoice;
+					console.log(`Using voice: ${eddyVoice.name}`);
+				}
+
+				utterance.rate = 1.0;
+				utterance.pitch = 0.6;
+				utterance.volume = 1.0;
+
+				speechSynthesis.speak(utterance);
+			};
+
+			// Check if voices are loaded, if not wait for them
+			if (speechSynthesis.getVoices().length === 0) {
+				speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+			} else {
+				speak();
+			}
+		}
+
+		if (dancer) {
+			console.log(`Dancer: ${dancer}`);
+
+			// Get saved face blob if it exists
+			let faceBlob = null;
+			if (userStore.hasFace) {
+				try {
+					faceBlob = await userStore.getFaceBlob();
+					console.log('Using saved face blob for generation');
+				} catch (error) {
+					console.error('Error getting saved face blob:', error);
+				}
+			}
+
+			queuePrompt({
+				workflow: celeryMan,
+				dancer,
+				imageBlob: faceBlob // Will be null if no saved face
+			});
+		}
 	}
 
 	function clearTranscription() {
@@ -153,21 +229,45 @@
 			🎤 Start Listening
 		</button>
 
-		<button class="btn stop-btn" onclick={stopListening} disabled={!isListening}>
+		<button
+			class="btn stop-btn"
+			onclick={() => {
+				isProcessingStop = false; // Allow manual stop
+				stopListening();
+			}}
+			disabled={!isListening}
+		>
 			⏹️ Stop Listening
 		</button>
 
 		<button class="btn clear-btn" onclick={clearTranscription} disabled={isListening}>
 			🗑️ Clear
 		</button>
-		<button
+		<!-- <button
 			class="btn clear-btn"
-			onclick={() => {
-				agent.sendChatMessage('can you show me celery man please?');
+			onclick={async () => {
+				// agent.sendChatMessage('can you show me celery man please?');
+				// stopListening()
+				// Get saved face blob if it exists
+				let faceBlob = null;
+				if (userStore.hasFace) {
+					try {
+						faceBlob = await userStore.getFaceBlob();
+						console.log('Using saved face blob for generation');
+					} catch (error) {
+						console.error('Error getting saved face blob:', error);
+					}
+				}
+
+				queuePrompt({
+					workflow: celeryMan,
+					dancer: 'celery_man',
+					imageBlob: faceBlob // Will be null if no saved face
+				});
 			}}
 		>
 			🗑️ celery man</button
-		>
+		> -->
 	</div>
 
 	{#if error}

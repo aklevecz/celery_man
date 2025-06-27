@@ -10,6 +10,7 @@
 	import WindowManager from '$lib/components/WindowManager.svelte';
 	import { celeryMan } from '$lib/prompts';
 	import { windowManager } from '$lib/window-manager.svelte.js';
+	import { userStore } from '$lib/user.svelte.js';
 	import { onMount } from 'svelte';
 
 	let backgroundImage = $state(null);
@@ -25,6 +26,7 @@
 	let promptType = $state('background');
 	let websocketStatus = $state('disconnected');
 	let websocketClientId = $state('');
+	let currentGenerationWindowId = $state(null);
 	/** @param {*} message */
 	function handleWebSocketMessage(message) {
 		switch (message.type) {
@@ -36,23 +38,69 @@
 				isLoading = true;
 				loadingStage = 'Starting generation...';
 				progress = 0;
+				
+				// Create loading window
+				currentGenerationWindowId = `generation-${Date.now()}`;
+				windowManager.createWindow({
+					id: currentGenerationWindowId,
+					title: 'Generating...',
+					width: 400,
+					height: 300,
+					x: 200 + Math.random() * 100,
+					y: 150 + Math.random() * 100,
+					content: `
+						<div style="padding: 20px; text-align: center; background: white; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+							<div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+							<div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">Finding your dancer...</div>
+							<div id="loading-stage" style="font-size: 12px; color: #666; margin-bottom: 20px;">Starting generation...</div>
+							<div style="width: 200px; height: 10px; background: #e0e0e0; border: 1px inset #c0c0c0;">
+								<div id="progress-bar" style="width: 0%; height: 100%; background: #0080ff; transition: width 0.3s;"></div>
+							</div>
+						</div>
+					`
+				});
 				break;
 			case 'executing':
 				console.log('Currently executing node:', message.data);
-				loadingStage = 'Processing image...';
+				loadingStage = 'Rubbing dancer...';
 				progress = 25;
+				
+				// Update loading window
+				if (currentGenerationWindowId) {
+					const loadingStageEl = document.getElementById('loading-stage');
+					const progressBarEl = document.getElementById('progress-bar');
+					if (loadingStageEl) loadingStageEl.textContent = 'Processing image...';
+					if (progressBarEl) progressBarEl.style.width = '25%';
+				}
 				break;
 			case 'progress':
 				console.log('Progress:', message.data);
 				if (message.data.value && message.data.max) {
 					progress = Math.round((message.data.value / message.data.max) * 100);
 					loadingStage = `Generating... ${progress}%`;
+					
+					// Update loading window
+					if (currentGenerationWindowId) {
+						const loadingStageEl = document.getElementById('loading-stage');
+						const progressBarEl = document.getElementById('progress-bar');
+						if (loadingStageEl) loadingStageEl.textContent = `Generating... ${progress}%`;
+						if (progressBarEl) progressBarEl.style.width = `${progress}%`;
+					}
 				}
 				break;
 			case 'executed':
 				console.log('Node executed:', message.data);
 				loadingStage = 'Finalizing...';
 				progress = 90;
+				
+				// Update loading window
+				if (currentGenerationWindowId) {
+					const loadingStageEl = document.getElementById('loading-stage');
+					const progressBarEl = document.getElementById('progress-bar');
+					if (loadingStageEl) loadingStageEl.textContent = 'Finalizing...';
+					if (progressBarEl) progressBarEl.style.width = '90%';
+				}
+				
 				const output = message.data.output;
 				if (output.gifs) {
 					const gifs = output.gifs;
@@ -61,20 +109,28 @@
 					const type = gifs[0].type;
 					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
 					
-					// Open a window to display the GIF
-					windowManager.createWindow({
-						id: `gif-${Date.now()}`, // Unique ID for each GIF
-						title: `Generated GIF - ${filename}`,
-						width: 400,
-						height: 400,
-						x: 100 + Math.random() * 200, // Random position
-						y: 100 + Math.random() * 200,
-						content: `
-							<div style="padding: 8px; text-align: center; background: white; height: 100%;">
-								<img src="${url}" alt="Generated GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-							</div>
-						`
-					});
+					// Replace loading window content with the GIF FIRST
+					if (currentGenerationWindowId) {
+						windowManager.updateWindowContent(currentGenerationWindowId, {
+                            height: 400,
+							title: `Here you go paul`,
+							content: `
+								<div style="padding: 8px; text-align: center; background: white; height: 100%;">
+									<img src="${url}" alt="Generated GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+								</div>
+							`
+						});
+					}
+
+					// Extract and save first frame in the background (non-blocking)
+					extractFirstFrame(url)
+						.then(async (firstFrameBlob) => {
+							await userStore.setDancerFrame(firstFrameBlob, url);
+							console.log('First frame saved to user store');
+						})
+						.catch((error) => {
+							console.error('Failed to extract and save first frame:', error);
+						});
 					
 					// Still set testImg for any other usage
 					if (testImg) {
@@ -87,6 +143,7 @@
 				isLoading = false;
 				loadingStage = '';
 				progress = 100;
+				currentGenerationWindowId = null; // Reset for next generation
 				// Refresh gallery after successful generation
 				// galleryStore.loadHistory();
 				break;
@@ -96,6 +153,12 @@
 				isLoading = false;
 				loadingStage = 'Generation failed';
 				progress = 0;
+				
+				// Close loading window on error
+				if (currentGenerationWindowId) {
+					windowManager.closeWindow(currentGenerationWindowId);
+					currentGenerationWindowId = null;
+				}
 				break;
 			case 'text':
 				textFeedback = message.data;
@@ -113,6 +176,52 @@
 		setTimeout(() => {
 			websocketClient.connect();
 		}, 100);
+	}
+
+	async function extractFirstFrame(gifUrl) {
+		try {
+			// Create a canvas to draw the first frame
+			const canvas = document.createElement('canvas');
+			const ctx = canvas.getContext('2d');
+			
+			// Create an image element to load the GIF
+			const img = new Image();
+			img.crossOrigin = 'anonymous';
+			
+			return new Promise((resolve, reject) => {
+				img.onload = () => {
+					try {
+						// Set canvas size to match the image
+						canvas.width = img.naturalWidth;
+						canvas.height = img.naturalHeight;
+						
+						// Draw the first frame (this will be the first frame of the GIF)
+						ctx.drawImage(img, 0, 0);
+						
+						// Convert to blob
+						canvas.toBlob((blob) => {
+							if (blob) {
+								console.log('First frame extracted successfully');
+								resolve(blob);
+							} else {
+								reject(new Error('Failed to create blob from first frame'));
+							}
+						}, 'image/png');
+					} catch (error) {
+						reject(error);
+					}
+				};
+				
+				img.onerror = () => {
+					reject(new Error('Failed to load GIF image'));
+				};
+				
+				img.src = gifUrl;
+			});
+		} catch (error) {
+			console.error('Error extracting first frame:', error);
+			throw error;
+		}
 	}
 
 	onMount(() => {
@@ -287,14 +396,14 @@
 			<div class="icon-image">📹</div>
 			<div class="icon-label">Camera</div>
 		</div>
-		<div class="icon" onclick={() => danceWindow(1)}>
+		<!-- <div class="icon" onclick={() => danceWindow(1)}>
 			<div class="icon-image">🕺</div>
 			<div class="icon-label">Dance</div>
-		</div>
-		<div class="icon" onclick={goodMorningPaul}>
+		</div> -->
+		<!-- <div class="icon" onclick={goodMorningPaul}>
 			<div class="icon-image">👋</div>
 			<div class="icon-label">Good Morning Paul</div>
-		</div>
+		</div> -->
 
 		<div class="icon" onclick={openCincoIdentityGenerator}>
 			<div class="icon-image">👤</div>

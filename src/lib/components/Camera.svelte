@@ -5,6 +5,7 @@
 	import pkg2 from '@mediapipe/camera_utils';
 	const { Camera } = pkg2;
 	import { queuePrompt } from '$lib/comfy-api';
+	import { userStore } from '$lib/user.svelte.js';
 	let videoElement;
 	let canvasElement;
 	let stream = null;
@@ -265,11 +266,15 @@
 			lastCapturedType = 'face';
 			lastCapturedTimestamp = new Date().toLocaleTimeString();
 
+			// Save face to user store
+			await userStore.setFace(blob, face);
+			console.log('Face saved to user store');
+
 			// Send to prompt system
-			await queuePrompt({ 
-				imageBlob: blob,
-				prompt: 'Cropped face from camera'
-			});
+			// await queuePrompt({ 
+			// 	imageBlob: blob,
+			// 	prompt: 'Cropped face from camera'
+			// });
 
 			console.log('Cropped face sent to prompt successfully');
 
@@ -341,6 +346,32 @@
 		}
 	}
 
+	async function useSavedFace() {
+		if (!userStore.hasFace) {
+			alert('No saved face available. Capture a face first.');
+			return;
+		}
+
+		try {
+			const faceBlob = await userStore.getFaceBlob();
+			if (!faceBlob) {
+				alert('Failed to load saved face data.');
+				return;
+			}
+
+			await queuePrompt({ 
+				imageBlob: faceBlob,
+				prompt: 'Using saved face from user profile'
+			});
+
+			console.log('Saved face sent to prompt successfully');
+
+		} catch (error) {
+			console.error('Error using saved face:', error);
+			alert('Failed to use saved face: ' + error.message);
+		}
+	}
+
 	onMount(async () => {
 		await initFaceDetection();
 		await startCamera();
@@ -367,6 +398,9 @@
 				{#if lastCapturedBlob}
 					<button class="btn resend-btn" onclick={resendLastImage}>🔄 Resend Last</button>
 				{/if}
+				{#if userStore.hasFace}
+					<button class="btn saved-face-btn" onclick={useSavedFace}>👤 Use Saved Face</button>
+				{/if}
 				<button class="btn" onclick={stopCamera}>Stop</button>
 			{:else}
 				<button class="btn" onclick={startCamera} disabled={isLoading}>
@@ -376,12 +410,25 @@
 		</div>
 	</div>
 
-	{#if lastCapturedBlob}
+	{#if lastCapturedBlob || userStore.hasFace}
 		<div class="cache-info">
-			<span class="cache-label">📦 Cached:</span>
-			<span class="cache-details">
-				{lastCapturedType} at {lastCapturedTimestamp}
-			</span>
+			{#if lastCapturedBlob}
+				<div class="cache-item">
+					<span class="cache-label">📦 Session Cache:</span>
+					<span class="cache-details">
+						{lastCapturedType} at {lastCapturedTimestamp}
+					</span>
+				</div>
+			{/if}
+			{#if userStore.hasFace}
+				<div class="cache-item">
+					<span class="cache-label">👤 Saved Face:</span>
+					<span class="cache-details">
+						{userStore.faceTimestamp}
+					</span>
+					<button class="btn clear-face-btn" onclick={() => userStore.clearFace()}>🗑️</button>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -499,11 +546,26 @@
 		background: #ddff88 !important;
 	}
 	
+	.saved-face-btn {
+		background: #aaeeff !important;
+		border-color: #88ccdd !important;
+	}
+	
+	.saved-face-btn:hover:not(:disabled) {
+		background: #88ddff !important;
+	}
+	
 	.cache-info {
 		background: #f0f0f0;
 		padding: 4px 8px;
 		border-bottom: 1px inset #c0c0c0;
 		font-size: 10px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	
+	.cache-item {
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -517,6 +579,18 @@
 	.cache-details {
 		color: #888;
 		font-style: italic;
+		flex: 1;
+	}
+	
+	.clear-face-btn {
+		padding: 2px 4px;
+		font-size: 8px;
+		background: #ffcccc !important;
+		border-color: #ddaaaa !important;
+	}
+	
+	.clear-face-btn:hover:not(:disabled) {
+		background: #ffaaaa !important;
 	}
 
 	.video-area {

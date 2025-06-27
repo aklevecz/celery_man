@@ -2,8 +2,8 @@
 // import { fetchUrl } from '$lib';
 // import { flow } from './prompts';
 
-import { fetchUrl } from "$lib";
-import { celeryMan } from "./prompts";
+import { fetchUrl } from '$lib';
+import { celeryMan } from './prompts';
 
 // const host = '127.0.0.1:8000';
 
@@ -46,14 +46,19 @@ async function uploadImage(imageBlob, filename = 'canvas_image.png') {
  * @throws {Error} - Throws an error if the image upload or fetch request fails.
  */
 
-async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '', dancer = 'celeryman' } = {}) {
-	console.log("running queue")
+async function queuePrompt({
+	workflow = celeryMan,
+	imageBlob = null,
+	prompt = '',
+	dancer = 'celeryman'
+} = {}) {
+	console.log('running queue');
 	// If we have an image, upload it first and get the filename
 	if (imageBlob) {
 		try {
 			console.log('Uploading image...');
 			const uploadedFilename = await uploadImage(imageBlob);
-			workflow['2']['inputs']['image'] = uploadedFilename;
+			workflow['9']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
 		} catch (error) {
 			console.error('Error uploading image:', error);
 			throw error;
@@ -62,11 +67,43 @@ async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '
 
 	// workflow['5']['inputs'].prompt = prompt;
 	// workflow['5']['inputs'].seed = Math.floor(Math.random() * 1000000);
-	const randomNumberBetween1And4 = Math.floor(Math.random() * 2) + 1;
-	workflow['5'].inputs.video = `${dancer}_dance_${randomNumberBetween1And4}.mp4`;
+
+	let parsedDancer = dancer.toLowerCase()
+
+	if (dancer === 'tame') {
+		parsedDancer = 'tayne'
+	}
+
+	if (dancer === '10') {
+		parsedDancer = 'tayne'
+	}
+
+	const allVideos = {
+		celeryman: [
+			'celeryman_dance_1.mp4',
+			'celeryman_dance_2.mp4',
+			'celeryman_dance_3.mp4',
+			'celeryman_dance_4.mp4'
+		],
+		tayne: [
+			'tayne_flarg.mp4',
+			'tayne_hatwobble.mp4',
+			'tayne_intro.mp4',
+			'tayne_kick.mp4',
+			'tayne_nsfw.mp4',
+			'tayne_punch.mp4',
+			'tayne_squat.mp4'
+		],
+		oyster: ['oyster_1.mp4', 'oyster_2.mp4']
+	};
+	console.log(parsedDancer)
+	const dancersOptions = allVideos[parsedDancer]
+	console.log(dancersOptions)
+	const dancerVideo = dancersOptions[Math.floor(Math.random() * dancersOptions.length)];
+	workflow['8'].inputs.video = `/workspace/ComfyUI/input/${dancerVideo}`;
 	const p = {
 		prompt: workflow,
-		client_id: window.comfyClientId,
+		client_id: window.comfyClientId
 		// extra_data: {
 		// 	api_key_comfy_org: PUBLIC_COMFYUI_API_KEY
 		// }
@@ -83,7 +120,7 @@ async function queuePrompt({ workflow = celeryMan, imageBlob = null, prompt  = '
 
 	if (!response.ok) {
 		const data = await response.json();
-		console.log(data)
+		console.log(data);
 		throw new Error('Failed to queue prompt');
 	}
 	return response;

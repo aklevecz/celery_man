@@ -117,6 +117,16 @@ function createWindowManager() {
 		window.height = Math.max(100, height);
 	}
 
+	function updateWindowContent(windowId, updates) {
+		const window = windows.find(w => w.id === windowId);
+		if (!window) return;
+
+		if (updates.title !== undefined) window.title = updates.title;
+		if (updates.content !== undefined) window.content = updates.content;
+		if (updates.width !== undefined) window.width = updates.width;
+		if (updates.height !== undefined) window.height = updates.height;
+	}
+
 	return {
 		get windows() { return windows; },
 		get activeWindowId() { return activeWindowId; },
@@ -127,7 +137,8 @@ function createWindowManager() {
 		minimizeWindow,
 		maximizeWindow,
 		moveWindow,
-		resizeWindow
+		resizeWindow,
+		updateWindowContent
 	};
 }
 
