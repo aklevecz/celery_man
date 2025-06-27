@@ -1,10 +1,11 @@
 <script>
 	import { fetchUrl } from '$lib';
 	import { websocketClient } from '$lib/websocket-client';
-	import { queuePrompt } from '$lib/comfy-api';
+	import { queueFluxPrompt, queuePrompt } from '$lib/comfy-api';
 	import Calculator from '$lib/components/Calculator.svelte';
 	import Camera from '$lib/components/Camera.svelte';
 	import CincoIdentityGenerator from '$lib/components/CincoIdentityGenerator.svelte';
+	import FluxImageGenerator from '$lib/components/FluxImageGenerator.svelte';
 	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
 	import SpeechTranscriber from '$lib/components/SpeechTranscriber.svelte';
 	import WindowManager from '$lib/components/WindowManager.svelte';
@@ -383,6 +384,99 @@
 			}
 		});
 	}
+
+	function openDancerFrameViewer() {
+		if (!userStore.hasDancerFrame) {
+			alert('No dancer frame saved. Generate a dancer first to save a frame.');
+			return;
+		}
+
+		const frameDataUrl = userStore.dancerFrameDataUrl;
+		const timestamp = userStore.dancerFrameTimestamp;
+		const originalGifUrl = userStore.dancerFrameGifUrl;
+
+		windowManager.createWindow({
+			id: 'dancer-frame-viewer',
+			title: 'Saved Dancer Frame',
+			width: 450,
+			height: 500,
+			x: 300,
+			y: 100,
+			content: `
+				<div style="background: white; height: 100%; display: flex; flex-direction: column;">
+					<div style="padding: 8px; border-bottom: 1px solid #ccc; background: #f0f0f0; font-size: 11px;">
+						<div style="font-weight: bold; margin-bottom: 4px;">📸 Dancer Frame</div>
+						<div style="color: #666;">Saved: ${timestamp}</div>
+					</div>
+					<div style="flex: 1; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+						<img src="${frameDataUrl}" alt="Saved Dancer Frame" style="max-width: 100%; max-height: 70%; object-fit: contain; border: 1px solid #ccc;" />
+						<div style="margin-top: 12px; display: flex; gap: 8px;">
+							<button onclick="window.downloadDancerFrame()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #c0c0c0; font-size: 10px; cursor: pointer;">
+								💾 Download
+							</button>
+							<button onclick="window.viewOriginalGif()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #c0c0c0; font-size: 10px; cursor: pointer;">
+								🎬 View Original GIF
+							</button>
+							<button onclick="window.clearDancerFrame()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #ffcccc; font-size: 10px; cursor: pointer;">
+								🗑️ Clear
+							</button>
+						</div>
+					</div>
+				</div>
+			`
+		});
+
+		// Add global functions for the buttons
+		window.downloadDancerFrame = () => {
+			const link = document.createElement('a');
+			link.download = `dancer-frame-${Date.now()}.png`;
+			link.href = frameDataUrl;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		};
+
+		window.viewOriginalGif = () => {
+			if (originalGifUrl) {
+				windowManager.createWindow({
+					id: `original-gif-${Date.now()}`,
+					title: 'Original GIF',
+					width: 400,
+					height: 400,
+					x: 350 + Math.random() * 100,
+					y: 150 + Math.random() * 100,
+					content: `
+						<div style="padding: 8px; text-align: center; background: white; height: 100%;">
+							<img src="${originalGifUrl}" alt="Original GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+						</div>
+					`
+				});
+			}
+		};
+
+		window.clearDancerFrame = () => {
+			if (confirm('Are you sure you want to clear the saved dancer frame?')) {
+				userStore.clearDancerFrame();
+				windowManager.closeWindow('dancer-frame-viewer');
+				alert('Dancer frame cleared successfully.');
+			}
+		};
+	}
+
+	function openFluxImageGenerator() {
+		windowManager.createWindow({
+			id: 'flux-image-generator',
+			title: 'Flux Image Generator',
+			width: 500,
+			height: 600,
+			x: 350,
+			y: 50,
+			content: {
+				component: FluxImageGenerator,
+				props: {}
+			}
+		});
+	}
 	let testImg = $state();
 </script>
 
@@ -408,6 +502,16 @@
 		<div class="icon" onclick={openCincoIdentityGenerator}>
 			<div class="icon-image">👤</div>
 			<div class="icon-label">Cinco Identity Generator</div>
+		</div>
+
+		<div class="icon" onclick={openDancerFrameViewer}>
+			<div class="icon-image">🖼️</div>
+			<div class="icon-label">Dancer Frame</div>
+		</div>
+
+		<div class="icon" onclick={openFluxImageGenerator}>
+			<div class="icon-image">🎨</div>
+			<div class="icon-label">Flux Generator</div>
 		</div>
 
 		<div class="icon" onclick={openNotepad}>

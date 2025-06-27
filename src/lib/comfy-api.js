@@ -3,7 +3,7 @@
 // import { flow } from './prompts';
 
 import { fetchUrl } from '$lib';
-import { celeryMan } from './prompts';
+import { celeryMan, flux_kontext } from './prompts';
 
 // const host = '127.0.0.1:8000';
 
@@ -68,14 +68,14 @@ async function queuePrompt({
 	// workflow['5']['inputs'].prompt = prompt;
 	// workflow['5']['inputs'].seed = Math.floor(Math.random() * 1000000);
 
-	let parsedDancer = dancer.toLowerCase()
+	let parsedDancer = dancer.toLowerCase();
 
 	if (dancer === 'tame') {
-		parsedDancer = 'tayne'
+		parsedDancer = 'tayne';
 	}
 
 	if (dancer === '10') {
-		parsedDancer = 'tayne'
+		parsedDancer = 'tayne';
 	}
 
 	const allVideos = {
@@ -96,9 +96,9 @@ async function queuePrompt({
 		],
 		oyster: ['oyster_1.mp4', 'oyster_2.mp4']
 	};
-	console.log(parsedDancer)
-	const dancersOptions = allVideos[parsedDancer]
-	console.log(dancersOptions)
+	console.log(parsedDancer);
+	const dancersOptions = allVideos[parsedDancer];
+	console.log(dancersOptions);
 	const dancerVideo = dancersOptions[Math.floor(Math.random() * dancersOptions.length)];
 	workflow['8'].inputs.video = `/workspace/ComfyUI/input/${dancerVideo}`;
 	const p = {
@@ -145,4 +145,81 @@ function getImgUrl({ filename, type, subfolder }) {
 	return url;
 }
 
-export { queuePrompt, getHistory, getImgUrl };
+/**
+ * Queues a Flux prompt for processing by uploading an image if provided and sending a Flux workflow to the server.
+ *
+ * @param {Object} params - The parameters for the queue prompt.
+ * @param {*} [params.workflow=flux_kontext] - The workflow configuration to be sent.
+ * @param {Blob | null} [params.imageBlob] - An optional image blob to be uploaded for reference.
+ * @param {string} [params.prompt=''] - The text prompt to be included in the workflow.
+ * @param {number} [params.width=1024] - The width of the generated image.
+ * @param {number} [params.height=1024] - The height of the generated image.
+ * @param {number} [params.steps=20] - The number of generation steps.
+ * @param {number} [params.guidance=2.5] - The guidance scale for generation.
+ * @param {number} [params.seed] - Optional seed for reproducible generation.
+ *
+ * @returns {Promise<Response>} - The response from the server after queuing the prompt.
+ *
+ * @throws {Error} - Throws an error if the image upload or fetch request fails.
+ */
+async function queueFluxPrompt({ workflow = flux_kontext, imageBlob = null, prompt = '' } = {}) {
+	console.log('Running Flux queue');
+
+	// Create a deep copy of the workflow to avoid modifying the original
+	const workflowCopy = JSON.parse(JSON.stringify(workflow));
+
+	// If we have an image, upload it first and update the reference image
+	if (imageBlob) {
+		try {
+			console.log('Uploading reference image...');
+			const uploadedFilename = await uploadImage(imageBlob, 'flux_reference.png');
+			workflowCopy['59']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
+		} catch (error) {
+			console.error('Error uploading reference image:', error);
+			throw error;
+		}
+	}
+
+	// Update the text prompt
+	if (prompt) {
+		workflowCopy['6']['inputs']['text'] = prompt;
+	}
+
+	// Update image dimensions
+	// workflowCopy['27']['inputs']['width'] = width;
+	// workflowCopy['27']['inputs']['height'] = height;
+	// workflowCopy['30']['inputs']['width'] = width;
+	// workflowCopy['30']['inputs']['height'] = height;
+
+	// // Update generation parameters
+	// workflowCopy['17']['inputs']['steps'] = steps;
+	// workflowCopy['26']['inputs']['guidance'] = guidance;
+
+	// Update seed if provided, otherwise use random
+	const finalSeed = Math.floor(Math.random() * 1000000000000000);
+	workflowCopy['25']['inputs']['noise_seed'] = finalSeed;
+
+	const payload = {
+		prompt: workflowCopy,
+		client_id: window.comfyClientId
+	};
+
+	console.log(`Sending Flux prompt: ${JSON.stringify(payload)}`);
+
+	const response = await fetch(`${fetchUrl}/prompt`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(payload)
+	});
+
+	if (!response.ok) {
+		const data = await response.json();
+		console.log(data);
+		throw new Error('Failed to queue Flux prompt');
+	}
+	return response;
+}
+
+export { queuePrompt, queueFluxPrompt, getHistory, getImgUrl };
