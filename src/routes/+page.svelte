@@ -137,6 +137,30 @@
 					if (testImg) {
 						testImg.src = url;
 					}
+				} else if (output.images) {
+					const images = output.images;
+					const filename = images[0].filename;
+					const subfolder = images[0].subfolder;
+					const type = images[0].type;
+					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
+					
+					// Replace loading window content with the generated image
+					if (currentGenerationWindowId) {
+						windowManager.updateWindowContent(currentGenerationWindowId, {
+							height: 600,
+							title: `Generated Image - ${filename}`,
+							content: `
+								<div style="padding: 8px; text-align: center; background: white; height: 100%;">
+									<img src="${url}" alt="Generated Image" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+								</div>
+							`
+						});
+					}
+					
+					// Still set testImg for any other usage
+					if (testImg) {
+						testImg.src = url;
+					}
 				}
 				break;
 			case 'execution_success':
