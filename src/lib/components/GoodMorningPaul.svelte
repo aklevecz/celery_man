@@ -1,27 +1,37 @@
 <script>
 	import Typewriter from './Typewriter.svelte';
 
+	/** @type {import('./Typewriter.svelte').default} */
 	let typewriter;
+
+	/** @type {HTMLAudioElement | null} */
+	let audio = null;
 
 	function triggerMessage1() {
 		typewriter.startTyping(['Good morning Paul.']);
 
-		const audio = document.getElementById('good-morning-paul');
-		audio.play();
+		audio = /** @type {HTMLAudioElement | null} */ (document.getElementById('good-morning-paul'));
+		if (audio) {
+			audio.play();
+		}
 	}
 
 	function triggerMessage2() {
 		typewriter.startTyping(['What will your first sequence of the day be']);
 
-		const audio = document.getElementById('first-sequence-of-the-day');
-		audio.play();
+		const audioElement = /** @type {HTMLAudioElement | null} */ (document.getElementById('first-sequence-of-the-day'));
+		if (audioElement) {
+			audioElement.play();
+		}
 	}
 
 	function triggerMessage3() {
 		typewriter.startTyping(['Yes Paul.']);
 
-		const audio = document.getElementById('yes-paul');
-		audio.play();
+		const audioElement = /** @type {HTMLAudioElement | null} */ (document.getElementById('yes-paul'));
+		if (audioElement) {
+			audioElement.play();
+		}
 	}
 </script>
 

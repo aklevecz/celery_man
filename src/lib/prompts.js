@@ -106,7 +106,7 @@ const testText = {
 	}
 };
 
-const celeryManoriginal = {
+const celeryMan = {
 	1: {
 		inputs: {
 			enabled: true,
@@ -236,7 +236,7 @@ const celeryMan2 = {
 	}
 };
 
-const celeryMan = {
+const celeryManRUn = {
 	1: {
 		inputs: {
 			enabled: true,
@@ -347,7 +347,7 @@ const flux_kontext = {
 	},
 	11: {
 		inputs: {
-			clip_name1: 't5/t5xxl_fp16.safetensors',
+			clip_name1: 't5xxl_fp16.safetensors',
 			clip_name2: 'clip_l.safetensors',
 			type: 'flux',
 			device: 'default'
@@ -359,7 +359,7 @@ const flux_kontext = {
 	},
 	12: {
 		inputs: {
-			unet_name: 'flux-kontext-devfp8.safetensors',
+			unet_name: 'flux1-dev-kontext_fp8_scaled.safetensors',
 			weight_dtype: 'default'
 		},
 		class_type: 'UNETLoader',

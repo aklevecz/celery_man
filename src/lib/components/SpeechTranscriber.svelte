@@ -1,10 +1,11 @@
 <script>
 	import agent from '$lib/agent.svelte';
-	import { queuePrompt } from '$lib/comfy-api';
+	import { queuePrompt, queueFluxPrompt } from '$lib/comfy-api';
 	import { celeryMan } from '$lib/prompts';
 	import { userStore } from '$lib/user.svelte.js';
 	import { onDestroy, onMount } from 'svelte';
 
+	/** @type {*} */
 	let recognition = null;
 	let isListening = $state(false);
 	let transcription = $state('');
@@ -40,6 +41,7 @@
 			console.log('Speech recognition started');
 		};
 
+		/** @param {*} event */
 		recognition.onresult = (event) => {
 			let interim = '';
 			let final = '';
@@ -74,6 +76,7 @@
 			}
 		};
 
+		/** @param {*} event */
 		recognition.onerror = (event) => {
 			console.error('Speech recognition error:', event.error);
 			error = `Recognition error: ${event.error}`;
@@ -99,7 +102,7 @@
 			error = '';
 			isProcessingStop = false; // Reset the flag
 			recognition.start();
-		} catch (err) {
+		} catch (/** @type {*} */ err) {
 			console.error('Error starting recognition:', err);
 			error = 'Failed to start listening: ' + err.message;
 		}
@@ -129,8 +132,8 @@
 		// 	queuePrompt({ workflow: celeryMan, dancer });
 		// }
 		console.log(`Final transcript: ${transcription}`);
-		const { dancer, danceType, modelResponse } = await agent.sendChatMessage(transcription);
-
+		let { dancer, danceType, modelResponse, editPrompt, isEdit } = await agent.sendChatMessage(transcription);
+		console.log(`Dancer: ${dancer}`);
 		if (modelResponse) {
 			// Use the browser Speech Synthesis API with Eddy en-US voice
 			const speak = () => {
@@ -163,25 +166,76 @@
 			}
 		}
 
+		if (!dancer) {
+			dancer = 'celeryman';
+		}
 		if (dancer) {
 			console.log(`Dancer: ${dancer}`);
 
-			// Get saved face blob if it exists
-			let faceBlob = null;
-			if (userStore.hasFace) {
-				try {
-					faceBlob = await userStore.getFaceBlob();
-					console.log('Using saved face blob for generation');
-				} catch (error) {
-					console.error('Error getting saved face blob:', error);
+			if (isEdit && editPrompt) {
+				// Handle edit request - use Flux with globally selected image
+				console.log(`Edit request: ${editPrompt}`);
+				
+				let imageBlob = null;
+				
+				// Try to use globally selected image first
+				if (userStore.hasGlobalSelection) {
+					try {
+						imageBlob = await userStore.getGloballySelectedImageBlob();
+						const selectedInfo = userStore.getGloballySelectedImageInfo();
+						console.log(`Using globally selected ${selectedInfo?.type} image for editing:`, selectedInfo?.title);
+					} catch (error) {
+						console.error('Error getting globally selected image blob:', error);
+					}
 				}
-			}
+				
+				// // Fall back to dancer frame if no global selection
+				// if (!imageBlob && userStore.hasDancerFrame) {
+				// 	try {
+				// 		imageBlob = await userStore.getDancerFrameBlob();
+				// 		console.log('Using saved dancer frame for editing (fallback)');
+				// 	} catch (error) {
+				// 		console.error('Error getting dancer frame blob:', error);
+				// 	}
+				// }
+				
+				// // Last fallback to face if available
+				// if (!imageBlob && userStore.hasFace) {
+				// 	try {
+				// 		imageBlob = await userStore.getFaceBlob();
+				// 		console.log('Using saved face for editing (last fallback)');
+				// 	} catch (error) {
+				// 		console.error('Error getting face blob:', error);
+				// 	}
+				// }
+				
+				if (imageBlob) {
+					await queueFluxPrompt({
+						prompt: editPrompt,
+						imageBlob: imageBlob
+					});
+				} else {
+					console.log('No reference image available for editing');
+				}
+			} else {
+				// Handle regular show request - use celery man workflow
+				// Get saved face blob if it exists
+				let faceBlob = null;
+				if (userStore.hasFace) {
+					try {
+						faceBlob = await userStore.getFaceBlob();
+						console.log('Using saved face blob for generation');
+					} catch (error) {
+						console.error('Error getting saved face blob:', error);
+					}
+				}
 
-			queuePrompt({
-				workflow: celeryMan,
-				dancer,
-				imageBlob: faceBlob // Will be null if no saved face
-			});
+				queuePrompt({
+					workflow: celeryMan,
+					dancer,
+					imageBlob: faceBlob // Will be null if no saved face
+				});
+			}
 		}
 	}
 

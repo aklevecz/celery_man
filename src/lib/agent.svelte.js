@@ -38,18 +38,78 @@ const generateDancerFunction = {
 			model_response: {
 				type: Type.STRING,
 				description:
-					'A direct response from the model acknowledging the request (.e.g. "Ok Paul", "Here is celery man Paul.", "Here you go Paul'
+					'A direct response from the model acknowledging the request (e.g. "Ok Paul", "Here is celery man Paul.", "Here you go Paul")'
 			}
 		},
 		required: ['user_message', 'dancer_name', 'model_response']
 	}
 };
+
+const editDancerFunction = {
+	name: 'edit_entity',
+	description:
+		'Call this function when the user asks to edit, modify, change, or alter an entity/character appearance or attributes.',
+	parameters: {
+		type: Type.OBJECT,
+		properties: {
+			user_message: {
+				type: Type.STRING,
+				description: 'The complete original message from the user'
+			},
+			edit_prompt: {
+				type: Type.STRING,
+				description:
+					'A prompt to be used in an image generation inference to edit the entity/character.'
+			},
+			dancer_name: {
+				type: Type.STRING,
+				description:
+					'The exact name of the entity/character the user wants to edit (e.g., "Celery Man", "Paul Rudd", "Tayne", "Tame").'
+			},
+			model_response: {
+				type: Type.STRING,
+				description:
+					'A direct response from the model acknowledging the request (e.g. "Ok Paul", "Here is celery man Paul.", "Here you go Paul")'
+			}
+		},
+		required: ['user_message', 'edit_prompt', 'dancer_name', 'model_response']
+	}
+};
+
 function createAgent() {
 	const genAI = new GoogleGenAI({ apiKey: PUBLIC_GEMINI_API_KEY });
 
 	let state = $state('idle');
 	/** @type {Message[]} */
 	let messages = $state([]);
+	
+	// Improved dancer name mapping with more variations
+	const dancerNameMapping = {
+		'celeryman': ['celery', 'celery man', 'celeryman'],
+		'tayne': ['tayne', 'tane', 'tain'],
+		'oyster': ['oyster', 'oysters'],
+		'paulrudd': ['paul', 'rudd', 'paul rudd']
+	};
+	
+	/**
+	 * Maps a raw dancer name to a normalized dancer key
+	 * @param {string} rawName
+	 * @returns {'celeryman' | 'oyster' | 'tayne' | 'paulrudd' | null}
+	 */
+	function normalizeDancerName(rawName) {
+		const lowerName = rawName.toLowerCase();
+		
+		for (const [key, variations] of Object.entries(dancerNameMapping)) {
+			for (const variation of variations) {
+				if (lowerName.includes(variation)) {
+					return /** @type {'celeryman' | 'oyster' | 'tayne' | 'paulrudd'} */ (key);
+				}
+			}
+		}
+		
+		return null;
+	}
+	
 	let agent = {
 		get state() {
 			return state;
@@ -61,76 +121,155 @@ function createAgent() {
 		 * Sends a chat message to the GoogleGenAI model to generate content based on the provided prompt.
 		 *
 		 * @param {string} prompt - The prompt to be sent for content generation.
-		 * @returns {Promise<{dancer: string | null, danceType: string | null,modelResponse: string | null}>} - A promise that resolves when content generation is complete.
+		 * @returns {Promise<{dancer: string | null, danceType: string | null, modelResponse: string | null, editPrompt: string | null, isEdit: boolean}>} - A promise that resolves when content generation is complete.
 		 */
 
 		sendChatMessage: async (prompt) => {
-			const enhancedPrompt = `
-You are a computer that responds to user commands. When the user says "computer" followed by a request to see/show/display an entity or character, you should call the show_entity function.
+			// Improved system prompt with clearer instructions
+			const systemPrompt = `You are a computer assistant that must ALWAYS call one of the available functions based on user commands.
 
-ALWAYS call the show_entity function when you detect:
-- "show me [name]"
-- "display [name]" 
-- "I want to see [name]"
-- "give me [name]"
-- Any variation asking to see a specific entity
+IMPORTANT: You MUST call a function for EVERY user message. Never respond without calling a function.
 
-Examples that should trigger the function:
-- "computer, show me Celery Man please" → call show_entity with dancer_name: "Celery Man"
-- "computer, display Paul Rudd" → call show_entity with dancer_name: "Paul Rudd"
-- "computer, I want to see Tayne doing flarhgunnstow" → call show_entity with dancer_name: "Tayne", type_of_dance: "flarhgunnstow"
+Rules:
+1. If the user wants to SEE, SHOW, DISPLAY, or VIEW an entity → call show_entity
+2. If the user wants to EDIT, MODIFY, CHANGE, ALTER, or UPDATE an entity → call edit_entity
+3. If unclear, default to show_entity
 
-User message: "${prompt}"
+Key phrases for show_entity:
+- "show me..."
+- "display..."
+- "I want to see..."
+- "give me..."
+- "can I see..."
+- "let me see..."
 
-If this message contains a request to show/display an entity, call the show_entity function with the appropriate parameters.`;
-			const result = await genAI.models.generateContent({
-				model: geminiModels.flash25,
-				contents: enhancedPrompt,
-				config: {
-					temperature: 0.1,
-					maxOutputTokens: 200,
-					tools: [
+Key phrases for edit_entity:
+- "make [entity] [description]"
+- "put [entity] in/wearing..."
+- "change [entity] to..."
+- "I want [entity] to be..."
+- "add [something] to [entity]"
+- "edit [entity]..."
+
+Available entities: Celery Man, Paul Rudd, Tayne, Oyster
+
+ALWAYS respond with a function call. Include a friendly acknowledgment in model_response.`;
+
+			try {
+				const result = await genAI.models.generateContent({
+					model: geminiModels.flash20,
+					contents: [
 						{
-							functionDeclarations: [generateDancerFunction]
+							role: 'user',
+							parts: [{ text: systemPrompt }]
+						},
+						{
+							role: 'model',
+							parts: [{ text: 'I understand. I will always call a function based on user commands.' }]
+						},
+						{
+							role: 'user',
+							parts: [{ text: prompt }]
 						}
-					]
+					],
+					config: {
+						temperature: 0.1, // Slightly increased for better function calling
+						maxOutputTokens: 400,
+						tools: [
+							{
+								functionDeclarations: [generateDancerFunction, editDancerFunction]
+							}
+						],
+						toolConfig: {
+							functionCallingConfig: {
+								mode: 'ANY', // Force function calling
+								allowedFunctionNames: ['show_entity', 'edit_entity']
+							}
+						}
+					}
+				});
+				
+				// Log the full response for debugging
+				console.log('Full Gemini response:', JSON.stringify(result, null, 2));
+				
+				const functionCalls = result.functionCalls;
+				
+				if (!functionCalls || functionCalls.length === 0) {
+					console.error('No function calls returned by Gemini');
+					// Fallback: try to parse the intent manually
+					const lowerPrompt = prompt.toLowerCase();
+					const isEdit = lowerPrompt.includes('edit') || 
+					              lowerPrompt.includes('wear') || 
+					              lowerPrompt.includes('put') || 
+					              lowerPrompt.includes('make') ||
+					              lowerPrompt.includes('change');
+					
+					return {
+						dancer: null,
+						danceType: null,
+						modelResponse: 'I couldn\'t process that command properly. Please try again.',
+						editPrompt: null,
+						isEdit: isEdit
+					};
 				}
-			});
-			const functionCalls = result.functionCalls;
-			console.log(functionCalls);
-			if (functionCalls && functionCalls.length > 0) {
-				const functionCall = functionCalls[0];
-				if (functionCall.name === 'show_entity' && functionCall.args) {
-					console.log(functionCall.args);
-					const dancerNameRaw = functionCall.args.dancer_name;
-
-					/** @type {*} */
-					const danceType = functionCall.args.type_of_dance;
-
-					/** @type {*} */
-					const modelResponse = functionCall.args.model_response;
-
-					if (typeof dancerNameRaw === 'string') {
-						/** @type {'celeryman' | 'oyster' | 'tayne' | null} */
-						let dancer = null;
-						if (dancerNameRaw.toLowerCase().includes('celery')) {
-							dancer = 'celeryman';
+				
+				// Process all function calls (in case there are multiple)
+				for (const functionCall of functionCalls) {
+					console.log(`Processing function call: ${functionCall.name}`, functionCall.args);
+					
+					if (functionCall.name === 'show_entity' && functionCall.args) {
+						const { dancer_name, type_of_dance, model_response } = functionCall.args;
+						
+						if (typeof dancer_name === 'string') {
+							const dancer = normalizeDancerName(dancer_name);
+							
+							return {
+								dancer,
+								danceType: type_of_dance || null,
+								modelResponse: model_response || `Showing ${dancer_name}`,
+								editPrompt: null,
+								isEdit: false
+							};
 						}
-						if (dancerNameRaw.toLowerCase().includes('t')) {
-							dancer = 'tayne';
+					}
+					
+					if (functionCall.name === 'edit_entity' && functionCall.args) {
+						const { dancer_name, edit_prompt, model_response } = functionCall.args;
+						
+						if (typeof dancer_name === 'string' && typeof edit_prompt === 'string') {
+							const dancer = normalizeDancerName(dancer_name);
+							
+							return {
+								dancer,
+								danceType: null,
+								modelResponse: model_response || `Editing ${dancer_name}`,
+								editPrompt: edit_prompt,
+								isEdit: true
+							};
 						}
-						if (dancerNameRaw.toLowerCase().includes('oyster')) {
-							dancer = 'oyster';
-						}
-
-						const message = `I want to see a ${danceType} dancer named ${dancer}.`;
-						console.log(message);
-						// cb && cb(dancer);
-						return { dancer, danceType, modelResponse };
 					}
 				}
+				
+				// If we get here, function calls were malformed
+				console.error('Function calls were malformed:', functionCalls);
+				return {
+					dancer: null,
+					danceType: null,
+					modelResponse: 'Function call was malformed. Please try again.',
+					editPrompt: null,
+					isEdit: false
+				};
+				
+			} catch (error) {
+				console.error('Error calling Gemini:', error);
+				return {
+					dancer: null,
+					danceType: null,
+					modelResponse: 'An error occurred. Please try again.',
+					editPrompt: null,
+					isEdit: false
+				};
 			}
-			return { dancer: null, danceType: null, modelResponse: null };
 		}
 	};
 	return agent;

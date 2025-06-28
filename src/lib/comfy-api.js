@@ -58,7 +58,8 @@ async function queuePrompt({
 		try {
 			console.log('Uploading image...');
 			const uploadedFilename = await uploadImage(imageBlob);
-			workflow['9']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
+			// workflow['2']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
+			workflow['2']['inputs']['image'] = `${uploadedFilename}`;
 		} catch (error) {
 			console.error('Error uploading image:', error);
 			throw error;
@@ -100,7 +101,9 @@ async function queuePrompt({
 	const dancersOptions = allVideos[parsedDancer];
 	console.log(dancersOptions);
 	const dancerVideo = dancersOptions[Math.floor(Math.random() * dancersOptions.length)];
-	workflow['8'].inputs.video = `/workspace/ComfyUI/input/${dancerVideo}`;
+	// workflow['5'].inputs.video = `/workspace/ComfyUI/input/${dancerVideo}`;
+	// workflow['5'].inputs.video = `${dancerVideo}`;
+
 	const p = {
 		prompt: workflow,
 		client_id: window.comfyClientId
@@ -173,7 +176,8 @@ async function queueFluxPrompt({ workflow = flux_kontext, imageBlob = null, prom
 		try {
 			console.log('Uploading reference image...');
 			const uploadedFilename = await uploadImage(imageBlob, 'flux_reference.png');
-			workflowCopy['59']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
+			// workflowCopy['59']['inputs']['image'] = `/workspace/ComfyUI/input/${uploadedFilename}`;
+			workflowCopy['59']['inputs']['image'] = `ComfyUI/input/${uploadedFilename}`;
 		} catch (error) {
 			console.error('Error uploading reference image:', error);
 			throw error;

@@ -13,6 +13,8 @@ declare global {
 declare global {
 	interface Window {
 		comfyClientId: string;
+		SpeechRecognition: any;
+		webkitSpeechRecognition: any;
 	}
 }
 export {};

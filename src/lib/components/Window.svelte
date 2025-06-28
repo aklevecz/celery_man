@@ -19,6 +19,7 @@
 	let dragOffset = { x: 0, y: 0 };
 	let resizeStart = { x: 0, y: 0, width: 0, height: 0 };
 
+	/** @param {*} e */
 	function handleMouseDown(e) {
 		if (e.target.closest('.window-controls') || e.target.closest('.resize-handle')) {
 			return;
@@ -34,6 +35,7 @@
 		e.preventDefault();
 	}
 
+	/** @param {*} e */
 	function handleMouseMove(e) {
 		if (isDragging && !isMaximized) {
 			const newX = e.clientX - dragOffset.x;
@@ -53,6 +55,7 @@
 		document.removeEventListener('mouseup', handleMouseUp);
 	}
 
+	/** @param {*} e */
 	function handleResizeStart(e) {
 		if (isMaximized) return;
 		

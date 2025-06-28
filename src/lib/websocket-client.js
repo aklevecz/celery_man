@@ -49,7 +49,7 @@ class WebSocketClient {
 				try {
 					const message = JSON.parse(event.data);
 					if (message.type === 'crystools.monitor') {
-						return
+						return;
 					}
 					console.log('JSON message:', message);
 					if (this.onMessage) {
@@ -116,6 +116,10 @@ class WebSocketClient {
 		this.connectionStatus = 'disconnected';
 	}
 
+	/**
+	 * Sets the handler for WebSocket messages
+	 * @param {Function} handler - Message handler function, called with the message object as argument
+	 */
 	setMessageHandler(handler) {
 		this.onMessage = handler;
 	}

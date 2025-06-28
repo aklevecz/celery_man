@@ -1,10 +1,15 @@
 <script>
 	import { fetchUrl } from '$lib';
+	import AllImagesGallery from '$lib/components/AllImagesGallery.svelte';
 	import Calculator from '$lib/components/Calculator.svelte';
 	import Camera from '$lib/components/Camera.svelte';
 	import CincoIdentityGenerator from '$lib/components/CincoIdentityGenerator.svelte';
+	import DancerFrameViewer from '$lib/components/DancerFrameViewer.svelte';
+	import EditedImagesViewer from '$lib/components/EditedImagesViewer.svelte';
 	import FluxImageGenerator from '$lib/components/FluxImageGenerator.svelte';
+	import GifDisplay from '$lib/components/GifDisplay.svelte';
 	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
+	import ImageDisplay from '$lib/components/ImageDisplay.svelte';
 	import SpeechTranscriber from '$lib/components/SpeechTranscriber.svelte';
 	import WindowManager from '$lib/components/WindowManager.svelte';
 	import { userStore } from '$lib/user.svelte.js';
@@ -108,11 +113,13 @@
 						windowManager.updateWindowContent(currentGenerationWindowId, {
                             height: 400,
 							title: `Here you go paul`,
-							content: `
-								<div style="padding: 8px; text-align: center; background: white; height: 100%;">
-									<img src="${url}" alt="Generated GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-								</div>
-							`
+							content: {
+								component: GifDisplay,
+								props: {
+									gifUrl: url,
+									alt: "Generated GIF"
+								}
+							}
 						});
 					}
 
@@ -142,13 +149,24 @@
 						windowManager.updateWindowContent(currentGenerationWindowId, {
 							height: 600,
 							title: `Generated Image - ${filename}`,
-							content: `
-								<div style="padding: 8px; text-align: center; background: white; height: 100%;">
-									<img src="${url}" alt="Generated Image" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-								</div>
-							`
+							content: {
+								component: ImageDisplay,
+								props: {
+									imageUrl: url,
+									alt: "Generated Image"
+								}
+							}
 						});
 					}
+
+					// Save the edited image to the user store (for Flux-generated images)
+					userStore.addEditedImage(url, `Generated image: ${filename}`)
+						.then((imageId) => {
+							console.log('Edited image saved to user store:', imageId);
+						})
+						.catch((error) => {
+							console.error('Failed to save edited image:', error);
+						});
 					
 					// Still set testImg for any other usage
 					if (testImg) {
@@ -243,6 +261,23 @@
 	}
 
 	onMount(() => {
+		// Register all window creators for persistence
+		windowManager.registerWindowCreator('notepad', openNotepad);
+		windowManager.registerWindowCreator('calculator', openCalculator);
+		windowManager.registerWindowCreator('about', openAbout);
+		windowManager.registerWindowCreator('taskbar-window', openTaskbar);
+		windowManager.registerWindowCreator('cinco-identity-generator', openCincoIdentityGenerator);
+		windowManager.registerWindowCreator('good-morning-paul', goodMorningPaul);
+		windowManager.registerWindowCreator('camera', openCamera);
+		windowManager.registerWindowCreator('speech-transcriber', openSpeechTranscriber);
+		windowManager.registerWindowCreator('dancer-frame-viewer', () => openDancerFrameViewer(true));
+		windowManager.registerWindowCreator('flux-image-generator', openFluxImageGenerator);
+		windowManager.registerWindowCreator('edited-images-viewer', openEditedImagesViewer);
+		windowManager.registerWindowCreator('all-images-gallery', openAllImagesGallery);
+
+		// Load saved window state
+		windowManager.loadWindowState();
+
 		websocketClient.connect();
 		websocketClient.setMessageHandler(handleWebSocketMessage);
 		
@@ -402,15 +437,11 @@
 		});
 	}
 
-	function openDancerFrameViewer() {
-		if (!userStore.hasDancerFrame) {
+	function openDancerFrameViewer(force = false) {
+		if (!force && !userStore.hasDancerFrame) {
 			alert('No dancer frame saved. Generate a dancer first to save a frame.');
 			return;
 		}
-
-		const frameDataUrl = userStore.dancerFrameDataUrl;
-		const timestamp = userStore.dancerFrameTimestamp;
-		const originalGifUrl = userStore.dancerFrameGifUrl;
 
 		windowManager.createWindow({
 			id: 'dancer-frame-viewer',
@@ -419,65 +450,15 @@
 			height: 500,
 			x: 300,
 			y: 100,
-			content: `
-				<div style="background: white; height: 100%; display: flex; flex-direction: column;">
-					<div style="padding: 8px; border-bottom: 1px solid #ccc; background: #f0f0f0; font-size: 11px;">
-						<div style="font-weight: bold; margin-bottom: 4px;">📸 Dancer Frame</div>
-						<div style="color: #666;">Saved: ${timestamp}</div>
-					</div>
-					<div style="flex: 1; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-						<img src="${frameDataUrl}" alt="Saved Dancer Frame" style="max-width: 100%; max-height: 70%; object-fit: contain; border: 1px solid #ccc;" />
-						<div style="margin-top: 12px; display: flex; gap: 8px;">
-							<button onclick="window.downloadDancerFrame()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #c0c0c0; font-size: 10px; cursor: pointer;">
-								💾 Download
-							</button>
-							<button onclick="window.viewOriginalGif()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #c0c0c0; font-size: 10px; cursor: pointer;">
-								🎬 View Original GIF
-							</button>
-							<button onclick="window.clearDancerFrame()" style="padding: 6px 12px; border: 1px outset #c0c0c0; background: #ffcccc; font-size: 10px; cursor: pointer;">
-								🗑️ Clear
-							</button>
-						</div>
-					</div>
-				</div>
-			`
+			content: {
+				component: DancerFrameViewer,
+				props: {
+					frameDataUrl: userStore.dancerFrameDataUrl,
+					timestamp: userStore.dancerFrameTimestamp,
+					originalGifUrl: userStore.dancerFrameGifUrl
+				}
+			}
 		});
-
-		// Add global functions for the buttons
-		window.downloadDancerFrame = () => {
-			const link = document.createElement('a');
-			link.download = `dancer-frame-${Date.now()}.png`;
-			link.href = frameDataUrl;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-		};
-
-		window.viewOriginalGif = () => {
-			if (originalGifUrl) {
-				windowManager.createWindow({
-					id: `original-gif-${Date.now()}`,
-					title: 'Original GIF',
-					width: 400,
-					height: 400,
-					x: 350 + Math.random() * 100,
-					y: 150 + Math.random() * 100,
-					content: `
-						<div style="padding: 8px; text-align: center; background: white; height: 100%;">
-							<img src="${originalGifUrl}" alt="Original GIF" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-						</div>
-					`
-				});
-			}
-		};
-
-		window.clearDancerFrame = () => {
-			if (confirm('Are you sure you want to clear the saved dancer frame?')) {
-				userStore.clearDancerFrame();
-				windowManager.closeWindow('dancer-frame-viewer');
-				alert('Dancer frame cleared successfully.');
-			}
-		};
 	}
 
 	function openFluxImageGenerator() {
@@ -493,6 +474,48 @@
 				props: {}
 			}
 		});
+	}
+
+	function openEditedImagesViewer() {
+		windowManager.createWindow({
+			id: 'edited-images-viewer',
+			title: 'Edited Images Gallery',
+			width: 600,
+			height: 500,
+			x: 250,
+			y: 100,
+			content: {
+				component: EditedImagesViewer,
+				props: {}
+			}
+		});
+	}
+
+	function openAllImagesGallery() {
+		windowManager.createWindow({
+			id: 'all-images-gallery',
+			title: 'All Saved Images',
+			width: 800,
+			height: 600,
+			x: 200,
+			y: 50,
+			content: {
+				component: AllImagesGallery,
+				props: {}
+			}
+		});
+	}
+
+	function clearWindowState() {
+		if (confirm('Clear all saved window positions and close all windows?')) {
+			// Close all windows first
+			const windowsToClose = [...windowManager.windows];
+			windowsToClose.forEach(window => {
+				windowManager.closeWindow(window.id);
+			});
+			// Clear the saved state
+			windowManager.clearWindowState();
+		}
 	}
 	let testImg = $state();
 </script>
@@ -531,6 +554,16 @@
 			<div class="icon-label">Flux Generator</div>
 		</div>
 
+		<div class="icon" onclick={openEditedImagesViewer}>
+			<div class="icon-image">🖼️</div>
+			<div class="icon-label">Edited Images</div>
+		</div>
+
+		<div class="icon" onclick={openAllImagesGallery}>
+			<div class="icon-image">📁</div>
+			<div class="icon-label">All Images</div>
+		</div>
+
 		<div class="icon" onclick={openNotepad}>
 			<div class="icon-image">📝</div>
 			<div class="icon-label">Notepad</div>
@@ -549,6 +582,11 @@
 		<div class="icon" onclick={openTaskbar}>
 			<div class="icon-image">📋</div>
 			<div class="icon-label">Task Manager</div>
+		</div>
+
+		<div class="icon" onclick={clearWindowState}>
+			<div class="icon-image">🔄</div>
+			<div class="icon-label">Reset Windows</div>
 		</div>
 	</div>
 
@@ -635,10 +673,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
+		height: 90%;
+		flex-wrap: wrap;
 	}
 
 	.icon {
-		width: 64px;
+		width: 72px;
 		text-align: center;
 		cursor: pointer;
 		padding: 4px;
@@ -659,7 +699,7 @@
 
 	.icon-label {
 		font-size: 11px;
-		word-wrap: break-word;
+		/* word-wrap: ; */
 		line-height: 1.2;
 	}
 

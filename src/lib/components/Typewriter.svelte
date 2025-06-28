@@ -1,12 +1,29 @@
 <script>
+	/**
+	 * @typedef {Object} TypewriterProps
+	 * @property {string[]} [messages] - Array of messages to type out
+	 * @property {number} [delay] - Delay between characters in milliseconds
+	 * @property {(() => void) | null} [onComplete] - Callback function when typing is complete
+	 */
+
+	/** @type {TypewriterProps} */
 	let { messages = [], delay = 100, onComplete = null } = $props();
 	
+	/** @type {string} */
 	let typewriterText = $state('');
+	/** @type {number} */
 	let currentMessageIndex = $state(0);
+	/** @type {number} */
 	let currentCharIndex = $state(0);
+	/** @type {boolean} */
 	let isTyping = $state(false);
+	/** @type {number | null} */
 	let typeInterval = null;
 	
+	/**
+	 * Start typing animation with new messages
+	 * @param {string | string[]} newMessages - Message(s) to type out
+	 */
 	function startTyping(newMessages) {
 		if (typeInterval) {
 			clearInterval(typeInterval);
@@ -18,6 +35,7 @@
 		currentCharIndex = 0;
 		isTyping = true;
 		
+		/** @type {string[]} */
 		const messagesToType = Array.isArray(newMessages) ? newMessages : [newMessages];
 		
 		typeInterval = setInterval(() => {
@@ -28,6 +46,7 @@
 				return;
 			}
 			
+			/** @type {string} */
 			const currentMessage = messagesToType[currentMessageIndex];
 			
 			if (currentCharIndex < currentMessage.length) {
@@ -55,7 +74,7 @@
 		}
 	});
 	
-	// Expose the startTyping function
+	// Expose the startTyping function for parent components
 	export { startTyping };
 </script>
 
