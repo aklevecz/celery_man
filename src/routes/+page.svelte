@@ -1,7 +1,5 @@
 <script>
 	import { fetchUrl } from '$lib';
-	import { websocketClient } from '$lib/websocket-client';
-	import { queueFluxPrompt, queuePrompt } from '$lib/comfy-api';
 	import Calculator from '$lib/components/Calculator.svelte';
 	import Camera from '$lib/components/Camera.svelte';
 	import CincoIdentityGenerator from '$lib/components/CincoIdentityGenerator.svelte';
@@ -9,22 +7,17 @@
 	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
 	import SpeechTranscriber from '$lib/components/SpeechTranscriber.svelte';
 	import WindowManager from '$lib/components/WindowManager.svelte';
-	import { celeryMan } from '$lib/prompts';
-	import { windowManager } from '$lib/window-manager.svelte.js';
 	import { userStore } from '$lib/user.svelte.js';
+	import { websocketClient } from '$lib/websocket-client';
+	import { windowManager } from '$lib/window-manager.svelte.js';
 	import { onMount } from 'svelte';
 
-	let backgroundImage = $state(null);
-	let backgroundPreview = $state('');
 	let isLoading = $state(false);
 	let loadingStage = $state('');
 	let progress = $state(0);
 
-	let imagePreviews = $state([]);
-
 	let textFeedback = $state('');
 
-	let promptType = $state('background');
 	let websocketStatus = $state('disconnected');
 	let websocketClientId = $state('');
 	let currentGenerationWindowId = $state(null);
@@ -514,10 +507,10 @@
 			<div class="icon-image">📹</div>
 			<div class="icon-label">Camera</div>
 		</div>
-		<!-- <div class="icon" onclick={() => danceWindow(1)}>
+		<div class="icon" onclick={() => danceWindow(1)}>
 			<div class="icon-image">🕺</div>
 			<div class="icon-label">Dance</div>
-		</div> -->
+		</div>
 		<!-- <div class="icon" onclick={goodMorningPaul}>
 			<div class="icon-image">👋</div>
 			<div class="icon-label">Good Morning Paul</div>
