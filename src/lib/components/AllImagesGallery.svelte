@@ -93,7 +93,7 @@
 	}
 
 	/** @param {string} imageId */
-	function deleteImage(imageId) {
+	async function deleteImage(imageId) {
 		const image = allImages.find((img) => img.id === imageId);
 		if (!image) return;
 
@@ -102,28 +102,28 @@
 
 		switch (image.type) {
 			case 'face':
-				userStore.clearFace();
+				await userStore.clearFace();
 				break;
 			case 'dancer-frame':
-				userStore.clearDancerFrame();
+				await userStore.clearDancerFrame();
 				break;
 			case 'edited':
 				const editedIndex = userStore.editedImages.findIndex((img) => img.id === imageId);
 				if (editedIndex >= 0) {
-					userStore.deleteEditedImage(editedIndex);
+					await userStore.deleteEditedImage(editedIndex);
 				}
 				break;
 		}
 	}
 
-	function clearAllImages() {
+	async function clearAllImages() {
 		if (!confirm('Are you sure you want to delete ALL saved images? This cannot be undone.')) {
 			return;
 		}
 
-		userStore.clearFace();
-		userStore.clearDancerFrame();
-		userStore.clearAllEditedImages();
+		await userStore.clearFace();
+		await userStore.clearDancerFrame();
+		await userStore.clearAllEditedImages();
 	}
 </script>
 

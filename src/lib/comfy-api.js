@@ -102,7 +102,7 @@ async function queuePrompt({
 	console.log(dancersOptions);
 	const dancerVideo = dancersOptions[Math.floor(Math.random() * dancersOptions.length)];
 	// workflow['5'].inputs.video = `/workspace/ComfyUI/input/${dancerVideo}`;
-	// workflow['5'].inputs.video = `${dancerVideo}`;
+	workflow['5'].inputs.video = `dancing_videos/${dancerVideo}`;
 
 	const p = {
 		prompt: workflow,

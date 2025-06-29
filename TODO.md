@@ -1,10 +1,9 @@
-- P0 - cache the image from the camera and use it for the swapping
-- give windows a bit more height
-- make windows 95 theme a library
+- parallel processes for for face swap and editing
+- upscale the videos
+
 - make speech transcriber look cooler / integrate it with the good morning paul
 - improve agent responses
-- cut more dance clips
-- think about how to produce more dance clips
+
 
 4d3d3d3
 

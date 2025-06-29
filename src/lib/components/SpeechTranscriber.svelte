@@ -1,4 +1,5 @@
 <script>
+	// I dont understand how the setup is blocking if it has no promises
 	import agent from '$lib/agent.svelte';
 	import { queuePrompt, queueFluxPrompt } from '$lib/comfy-api';
 	import { celeryMan } from '$lib/prompts';
@@ -14,32 +15,38 @@
 	let error = $state('');
 	let isSupported = $state(false);
 	let isProcessingStop = $state(false);
+	let isSetupComplete = $state(false);
 
 	// Check if speech recognition is supported
-	onMount(() => {
+	onMount(async () => {
 		if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 			isSupported = true;
-			setupSpeechRecognition();
+			await setupSpeechRecognition();
+			// Auto-start transcription once setup is complete
+			if (isSetupComplete && !isListening) {
+				startListening();
+			}
 		} else {
 			error = 'Speech recognition not supported in this browser. Try Chrome or Edge.';
 		}
 	});
 
-	function setupSpeechRecognition() {
-		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-		recognition = new SpeechRecognition();
+	async function setupSpeechRecognition() {
+		try {
+			const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+			recognition = new SpeechRecognition();
 
-		// Configure recognition
-		recognition.continuous = true;
-		recognition.interimResults = true;
-		recognition.lang = 'en-US';
-		recognition.maxAlternatives = 1;
+			// Configure recognition
+			recognition.continuous = true;
+			recognition.interimResults = true;
+			recognition.lang = 'en-US';
+			recognition.maxAlternatives = 1;
 
-		recognition.onstart = () => {
-			isListening = true;
-			error = '';
-			console.log('Speech recognition started');
-		};
+			recognition.onstart = () => {
+				isListening = true;
+				error = '';
+				console.log('Speech recognition started');
+			};
 
 		/** @param {*} event */
 		recognition.onresult = (event) => {
@@ -87,6 +94,15 @@
 			console.log('Speech recognition ended');
 			isListening = false;
 		};
+
+		// Mark setup as complete
+		isSetupComplete = true;
+		console.log('Speech recognition setup complete');
+		
+		} catch (setupError) {
+			console.error('Error setting up speech recognition:', setupError);
+			error = 'Failed to setup speech recognition: ' + setupError.message;
+		}
 	}
 
 	function startListening() {
@@ -267,6 +283,8 @@
 				<span class="listening">🎤 LISTENING</span>
 			{:else if !isSupported}
 				<span class="error">❌ NOT SUPPORTED</span>
+			{:else if !isSetupComplete}
+				<span class="setting-up">🔄 Setting up...</span>
 			{:else}
 				<span class="idle">⚪ Ready</span>
 			{/if}
@@ -277,10 +295,16 @@
 		<button
 			class="btn listen-btn"
 			onclick={startListening}
-			disabled={isListening || !isSupported}
+			disabled={isListening || !isSupported || !isSetupComplete}
 			class:listening={isListening}
 		>
-			🎤 Start Listening
+			{#if !isSetupComplete}
+				🔄 Setting up...
+			{:else if isListening}
+				🎤 Listening...
+			{:else}
+				🎤 Start Listening
+			{/if}
 		</button>
 
 		<button
@@ -406,6 +430,16 @@
 
 	.idle {
 		color: #666;
+	}
+
+	.setting-up {
+		color: #0066cc;
+		animation: pulse 1.5s infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.5; }
 	}
 
 	@keyframes blink {

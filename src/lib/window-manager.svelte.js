@@ -81,7 +81,7 @@ function createWindowManager() {
 			};
 
 			localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-			console.log('Window state saved:', state);
+			// console.log('Window state saved:', state);
 		} catch (error) {
 			console.error('Failed to save window state:', error);
 		}

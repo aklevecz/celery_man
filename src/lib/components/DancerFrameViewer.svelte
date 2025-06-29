@@ -34,9 +34,9 @@
 		}
 	}
 
-	function clearDancerFrame() {
+	async function clearDancerFrame() {
 		if (confirm('Are you sure you want to clear the saved dancer frame?')) {
-			userStore.clearDancerFrame();
+			await userStore.clearDancerFrame();
 			windowManager.closeWindow('dancer-frame-viewer');
 			alert('Dancer frame cleared successfully.');
 		}

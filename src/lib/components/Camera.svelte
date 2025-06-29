@@ -426,7 +426,7 @@
 					<span class="cache-details">
 						{userStore.faceTimestamp}
 					</span>
-					<button class="btn clear-face-btn" onclick={() => userStore.clearFace()}>🗑️</button>
+					<button class="btn clear-face-btn" onclick={async () => await userStore.clearFace()}>🗑️</button>
 				</div>
 			{/if}
 		</div>

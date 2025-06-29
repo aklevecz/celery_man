@@ -7,19 +7,13 @@
 	let isGenerating = $state(false);
 	let error = $state('');
 	let success = $state('');
-	let previewDancerFrame = $state(false);
+	let previewImage = $state(false);
 
-	// Check if dancer frame is available
-	let hasDancerFrame = $state(userStore.hasDancerFrame);
-	let dancerFrameUrl = $state(userStore.dancerFrameDataUrl);
-	let dancerFrameTimestamp = $state(userStore.dancerFrameTimestamp);
-
-	// Update reactive state when user store changes
-	$effect(() => {
-		hasDancerFrame = userStore.hasDancerFrame;
-		dancerFrameUrl = userStore.dancerFrameDataUrl;
-		dancerFrameTimestamp = userStore.dancerFrameTimestamp;
-	});
+	// Get globally selected image info
+	let hasGlobalSelection = $derived(userStore.hasGlobalSelection);
+	let selectedImageInfo = $derived(userStore.getGloballySelectedImageInfo());
+	let selectedImageType = $derived(userStore.selectedImageType);
+	let selectedImageId = $derived(userStore.selectedImageId);
 
 	async function generateImage() {
 		if (!prompt.trim()) {
@@ -27,8 +21,8 @@
 			return;
 		}
 
-		if (!hasDancerFrame) {
-			error = 'No dancer frame available. Generate a dancer first to use as reference.';
+		if (!hasGlobalSelection) {
+			error = 'No image selected. Please select an image from the "All Images" gallery to use as reference.';
 			return;
 		}
 
@@ -37,18 +31,18 @@
 			error = '';
 			success = '';
 
-			// Get the dancer frame blob
-			const dancerFrameBlob = await userStore.getDancerFrameBlob();
-			if (!dancerFrameBlob) {
-				throw new Error('Failed to load dancer frame data');
+			// Get the globally selected image blob
+			const imageBlob = await userStore.getGloballySelectedImageBlob();
+			if (!imageBlob) {
+				throw new Error('Failed to load selected image data');
 			}
 
 			console.log('Generating Flux image with prompt:', prompt);
-			console.log('Using dancer frame as reference');
+			console.log(`Using globally selected ${selectedImageType} image as reference:`, selectedImageInfo?.title);
 
 			await queueFluxPrompt({
 				prompt: prompt.trim(),
-				imageBlob: dancerFrameBlob
+				imageBlob: imageBlob
 			});
 
 			success = 'Flux image generation started! Check the loading window for progress.';
@@ -77,29 +71,32 @@
 	<div class="flux-header">
 		<span class="title">🎨 Flux Image Generator</span>
 		<div class="status">
-			{#if hasDancerFrame}
-				<span class="has-frame">✅ Dancer Frame Ready</span>
+			{#if hasGlobalSelection}
+				<span class="has-selection">✅ Image Selected</span>
 			{:else}
-				<span class="no-frame">❌ No Dancer Frame</span>
+				<span class="no-selection">❌ No Image Selected</span>
 			{/if}
 		</div>
 	</div>
 
-	{#if hasDancerFrame}
+	{#if hasGlobalSelection && selectedImageInfo}
 		<div class="reference-section">
 			<div class="reference-header">
 				<span class="reference-label">📸 Reference Image:</span>
-				<span class="reference-timestamp">{dancerFrameTimestamp}</span>
+				<div class="reference-info">
+					<span class="reference-title">{selectedImageInfo.title}</span>
+					<span class="reference-timestamp">{selectedImageInfo.timestamp}</span>
+				</div>
 				<button 
 					class="btn preview-btn" 
-					onclick={() => previewDancerFrame = !previewDancerFrame}
+					onclick={() => previewImage = !previewImage}
 				>
-					{previewDancerFrame ? '🙈 Hide' : '👁️ Show'}
+					{previewImage ? '🙈 Hide' : '👁️ Show'}
 				</button>
 			</div>
-			{#if previewDancerFrame}
+			{#if previewImage}
 				<div class="reference-preview">
-					<img src={dancerFrameUrl} alt="Dancer Frame Reference" />
+					<img src={selectedImageInfo.dataUrl} alt={selectedImageInfo.title} />
 				</div>
 			{/if}
 		</div>
@@ -112,8 +109,8 @@
 		<textarea
 			id="flux-prompt"
 			bind:value={prompt}
-			placeholder="Describe how you want to transform the dancer frame... (e.g., 'put the man in a dress', 'make them a superhero', 'in the style of anime')"
-			disabled={isGenerating || !hasDancerFrame}
+			placeholder="Describe how you want to transform the selected image... (e.g., 'put the person in a dress', 'make them a superhero', 'in the style of anime')"
+			disabled={isGenerating || !hasGlobalSelection}
 			class="prompt-input"
 		></textarea>
 	</div>
@@ -122,7 +119,7 @@
 		<button 
 			class="btn generate-btn" 
 			onclick={generateImage}
-			disabled={isGenerating || !hasDancerFrame || !prompt.trim()}
+			disabled={isGenerating || !hasGlobalSelection || !prompt.trim()}
 		>
 			{#if isGenerating}
 				⏳ Generating...
@@ -150,12 +147,12 @@
 		</div>
 	{/if}
 
-	{#if !hasDancerFrame}
-		<div class="no-frame-info">
+	{#if !hasGlobalSelection}
+		<div class="no-selection-info">
 			<div class="info-icon">📝</div>
 			<div class="info-text">
-				<strong>No dancer frame available</strong><br>
-				Generate a dancer GIF first to save a reference frame that can be used with Flux.
+				<strong>No image selected</strong><br>
+				Go to "All Images" gallery and select an image (face, dancer frame, or edited image) to use as reference for Flux generation.
 			</div>
 		</div>
 	{/if}
@@ -190,11 +187,11 @@
 		font-weight: bold;
 	}
 
-	.has-frame {
+	.has-selection {
 		color: #008000;
 	}
 
-	.no-frame {
+	.no-selection {
 		color: #cc0000;
 	}
 
@@ -217,11 +214,23 @@
 		color: #333;
 	}
 
-	.reference-timestamp {
+	.reference-info {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.reference-title {
 		font-size: 10px;
+		font-weight: bold;
+		color: #333;
+	}
+
+	.reference-timestamp {
+		font-size: 9px;
 		color: #666;
 		font-style: italic;
-		flex: 1;
 	}
 
 	.preview-btn {
@@ -346,7 +355,7 @@
 		color: #008000;
 	}
 
-	.no-frame-info {
+	.no-selection-info {
 		display: flex;
 		align-items: center;
 		gap: 12px;

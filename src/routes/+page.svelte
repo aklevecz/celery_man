@@ -7,6 +7,7 @@
 	import DancerFrameViewer from '$lib/components/DancerFrameViewer.svelte';
 	import EditedImagesViewer from '$lib/components/EditedImagesViewer.svelte';
 	import FluxImageGenerator from '$lib/components/FluxImageGenerator.svelte';
+	import GeneratedGifsViewer from '$lib/components/GeneratedGifsViewer.svelte';
 	import GifDisplay from '$lib/components/GifDisplay.svelte';
 	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
 	import ImageDisplay from '$lib/components/ImageDisplay.svelte';
@@ -122,6 +123,11 @@
 							}
 						});
 					}
+
+					// Save the generated GIF to the user store
+					const gifTitle = `Generated GIF - ${filename}`;
+					const gifId = userStore.addGeneratedGif(url, gifTitle, '', 'generated');
+					console.log('Generated GIF saved to user store:', gifId);
 
 					// Extract and save first frame in the background (non-blocking)
 					extractFirstFrame(url)
@@ -274,6 +280,7 @@
 		windowManager.registerWindowCreator('flux-image-generator', openFluxImageGenerator);
 		windowManager.registerWindowCreator('edited-images-viewer', openEditedImagesViewer);
 		windowManager.registerWindowCreator('all-images-gallery', openAllImagesGallery);
+		windowManager.registerWindowCreator('generated-gifs-viewer', openGeneratedGifsViewer);
 
 		// Load saved window state
 		windowManager.loadWindowState();
@@ -506,6 +513,21 @@
 		});
 	}
 
+	function openGeneratedGifsViewer() {
+		windowManager.createWindow({
+			id: 'generated-gifs-viewer',
+			title: 'Generated GIFs Gallery',
+			width: 800,
+			height: 600,
+			x: 250,
+			y: 100,
+			content: {
+				component: GeneratedGifsViewer,
+				props: {}
+			}
+		});
+	}
+
 	function clearWindowState() {
 		if (confirm('Clear all saved window positions and close all windows?')) {
 			// Close all windows first
@@ -562,6 +584,11 @@
 		<div class="icon" onclick={openAllImagesGallery}>
 			<div class="icon-image">📁</div>
 			<div class="icon-label">All Images</div>
+		</div>
+
+		<div class="icon" onclick={openGeneratedGifsViewer}>
+			<div class="icon-image">🎬</div>
+			<div class="icon-label">Generated GIFs</div>
 		</div>
 
 		<div class="icon" onclick={openNotepad}>
