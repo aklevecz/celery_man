@@ -3,7 +3,7 @@ import { websocketUrl } from '$lib';
 class WebSocketClient {
 	constructor() {
 		this.ws = null;
-		this.clientId = 'your-client-id-' + Math.random();
+		this.clientId = 'cid_' + Math.floor(Math.random() * 1000)
 		this.connectionStatus = 'disconnected';
 		this.isConnecting = false;
 		this.onMessage = null;
