@@ -30,16 +30,17 @@
 	<div class="header">
 		<span class="title">🎨 Edited Images ({images.length})</span>
 		{#if images.length > 0}
-			<button class="btn clear-all-btn" onclick={clearAll}>
-				🗑️ Clear All
-			</button>
+			<button class="btn clear-all-btn" onclick={clearAll}> 🗑️ Clear All </button>
 		{/if}
 	</div>
 
 	{#if images.length === 0}
 		<div class="empty-state">
 			<p>No edited images yet.</p>
-			<p>Use the speech transcriber to say "I want [character] to be wearing [something]" to create edited images.</p>
+			<p>
+				Use the speech transcriber to say "I want [character] to be wearing [something]" to create
+				edited images.
+			</p>
 		</div>
 	{:else}
 		<div class="content">
@@ -70,10 +71,14 @@
 			<!-- Images grid -->
 			<div class="images-grid">
 				{#each images as image, index}
-					<div 
-						class="image-item" 
+					<div
+						class="image-item"
 						class:selected={index === selectedIndex}
 						onclick={() => selectImage(index)}
+						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectImage(index)}
+						role="button"
+						tabindex="0"
+						aria-label="Select edited image {index + 1}"
 					>
 						<div class="image-preview">
 							<img src={image.dataUrl} alt="Edited image {index + 1}" />
@@ -83,8 +88,8 @@
 							<div class="image-timestamp">{image.timestamp}</div>
 						</div>
 						<div class="image-controls">
-							<button 
-								class="btn-small download-btn-small" 
+							<button
+								class="btn-small download-btn-small"
 								onclick={(e) => {
 									e.stopPropagation();
 									downloadImage(index);
@@ -93,8 +98,8 @@
 							>
 								💾
 							</button>
-							<button 
-								class="btn-small delete-btn-small" 
+							<button
+								class="btn-small delete-btn-small"
 								onclick={(e) => {
 									e.stopPropagation();
 									deleteImage(index);
@@ -264,7 +269,8 @@
 		margin-top: 2px;
 	}
 
-	.btn, .btn-small {
+	.btn,
+	.btn-small {
 		padding: 4px 6px;
 		border: 1px outset #c0c0c0;
 		background: #c0c0c0;
@@ -279,11 +285,13 @@
 		font-size: 8px;
 	}
 
-	.btn:hover:not(:disabled), .btn-small:hover:not(:disabled) {
+	.btn:hover:not(:disabled),
+	.btn-small:hover:not(:disabled) {
 		background: #d4d0c8;
 	}
 
-	.btn:active:not(:disabled), .btn-small:active:not(:disabled) {
+	.btn:active:not(:disabled),
+	.btn-small:active:not(:disabled) {
 		border: 1px inset #c0c0c0;
 	}
 
@@ -292,11 +300,13 @@
 		font-weight: bold;
 	}
 
-	.delete-btn, .delete-btn-small {
+	.delete-btn,
+	.delete-btn-small {
 		color: #cc0000;
 	}
 
-	.download-btn, .download-btn-small {
+	.download-btn,
+	.download-btn-small {
 		color: #006600;
 	}
 </style>

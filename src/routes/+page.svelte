@@ -2,23 +2,24 @@
 	import { fetchUrl } from '$lib';
 	import GifDisplay from '$lib/components/GifDisplay.svelte';
 	import ImageDisplay from '$lib/components/ImageDisplay.svelte';
+	import Taskbar from '$lib/components/Taskbar.svelte';
+	import WebSocketStatusBar from '$lib/components/WebSocketStatusBar.svelte';
 	import WindowManager from '$lib/components/WindowManager.svelte';
 	import { userStore } from '$lib/user.svelte.js';
 	import { websocketClient } from '$lib/websocket-client';
 	import { windowManager } from '$lib/window-manager.svelte.js';
-	import NotepadController from '$lib/windows/notepad/NotepadController.svelte';
+	import AboutController from '$lib/windows/about/AboutController.svelte';
+	import AllImagesGalleryController from '$lib/windows/all-images-gallery/AllImagesGalleryController.svelte';
 	import CalculatorController from '$lib/windows/calculator/CalculatorController.svelte';
 	import CameraController from '$lib/windows/camera/CameraController.svelte';
-	import SpeechTranscriberController from '$lib/windows/speech-transcriber/SpeechTranscriberController.svelte';
 	import CincoIdentityGeneratorController from '$lib/windows/cinco-identity-generator/CincoIdentityGeneratorController.svelte';
 	import DancerFrameViewerController from '$lib/windows/dancer-frame-viewer/DancerFrameViewerController.svelte';
-	import FluxImageGeneratorController from '$lib/windows/flux-image-generator/FluxImageGeneratorController.svelte';
 	import EditedImagesViewerController from '$lib/windows/edited-images-viewer/EditedImagesViewerController.svelte';
-	import AllImagesGalleryController from '$lib/windows/all-images-gallery/AllImagesGalleryController.svelte';
+	import FluxImageGeneratorController from '$lib/windows/flux-image-generator/FluxImageGeneratorController.svelte';
 	import GeneratedGifsViewerController from '$lib/windows/generated-gifs-viewer/GeneratedGifsViewerController.svelte';
-	import AboutController from '$lib/windows/about/AboutController.svelte';
+	import NotepadController from '$lib/windows/notepad/NotepadController.svelte';
+	import SpeechTranscriberController from '$lib/windows/speech-transcriber/SpeechTranscriberController.svelte';
 	import TaskManagerController from '$lib/windows/task-manager/TaskManagerController.svelte';
-	import GoodMorningPaulController from '$lib/windows/good-morning-paul/GoodMorningPaulController.svelte';
 	import { onMount } from 'svelte';
 
 	let isLoading = $state(false);
@@ -27,10 +28,9 @@
 
 	let textFeedback = $state('');
 
-	let websocketStatus = $state('disconnected');
-	let websocketClientId = $state('');
+	/** @type {string | null} */
 	let currentGenerationWindowId = $state(null);
-	/** @param {*} message */
+	/** @param {any} message */
 	function handleWebSocketMessage(message) {
 		switch (message.type) {
 			case 'status':
@@ -212,18 +212,7 @@
 		}
 	}
 
-	function updateWebSocketStatus() {
-		websocketStatus = websocketClient.getConnectionStatus();
-		websocketClientId = websocketClient.getClientId() || '';
-	}
-
-	function retryConnection() {
-		websocketClient.disconnect();
-		setTimeout(() => {
-			websocketClient.connect();
-		}, 100);
-	}
-
+	/** @param {string} gifUrl */
 	async function extractFirstFrame(gifUrl) {
 		try {
 			// Create a canvas to draw the first frame
@@ -242,7 +231,7 @@
 						canvas.height = img.naturalHeight;
 
 						// Draw the first frame (this will be the first frame of the GIF)
-						ctx.drawImage(img, 0, 0);
+						ctx?.drawImage(img, 0, 0);
 
 						// Convert to blob
 						canvas.toBlob((blob) => {
@@ -279,16 +268,6 @@
 
 		websocketClient.connect();
 		websocketClient.setMessageHandler(handleWebSocketMessage);
-
-		// Update status initially
-		updateWebSocketStatus();
-
-		// Poll status every 500ms for reactive updates
-		const statusInterval = setInterval(updateWebSocketStatus, 500);
-
-		return () => {
-			clearInterval(statusInterval);
-		};
 	});
 	// function openNotepad() {
 	// 	windowManager.createWindow({
@@ -309,11 +288,6 @@
 	// 	});
 	// }
 
-
-
-
-
-
 	/** @param {number} n */
 	function danceWindow(n) {
 		windowManager.createWindow({
@@ -328,13 +302,6 @@
 		});
 	}
 
-
-
-
-
-
-
-
 	function clearWindowState() {
 		if (confirm('Clear all saved window positions and close all windows?')) {
 			// Close all windows first
@@ -346,13 +313,21 @@
 			windowManager.clearWindowState();
 		}
 	}
+	/** @type {HTMLImageElement | undefined} */
 	let testImg = $state();
 </script>
 
 <div class="desktop">
 	<div class="desktop-icons">
 		{#snippet desktopIcon(/** @type {{onClick:() => void, icon:string, label:string }} */ p)}
-			<div class="icon" onclick={p.onClick}>
+			<div
+				class="icon"
+				onclick={p.onClick}
+				onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && p.onClick()}
+				role="button"
+				tabindex="0"
+				aria-label="Open {p.label}"
+			>
 				<div class="icon-image">{p.icon}</div>
 				<div class="icon-label">{p.label}</div>
 			</div>
@@ -443,68 +418,7 @@
 		})}
 	</div>
 
-	<div class="taskbar">
-		<button class="start-button">
-			<span class="start-logo">🪟</span>
-			Start
-		</button>
-
-		<div class="taskbar-buttons">
-			{#each windowManager.windows as window (window.id)}
-				<button
-					class="taskbar-button"
-					class:active={windowManager.activeWindowId === window.id}
-					onclick={() => windowManager.focusWindow(window.id)}
-				>
-					{window.title}
-				</button>
-			{/each}
-		</div>
-
-		<div class="system-tray">
-			<span class="time"
-				>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span
-			>
-		</div>
-	</div>
-
-	<!-- WebSocket Status Bar -->
-	<div class="websocket-status-bar">
-		<div class="status-indicator">
-			<span
-				class="status-icon"
-				class:connected={websocketStatus === 'connected'}
-				class:connecting={websocketStatus === 'connecting'}
-				class:disconnected={websocketStatus === 'disconnected'}
-				class:error={websocketStatus === 'error'}
-			>
-				{#if websocketStatus === 'connected'}
-					🟢
-				{:else if websocketStatus === 'connecting'}
-					🟡
-				{:else if websocketStatus === 'reconnecting'}
-					🟠
-				{:else if websocketStatus === 'error'}
-					🔴
-				{:else}
-					⚫
-				{/if}
-			</span>
-			<span class="status-text">
-				WebSocket: {websocketStatus.toUpperCase()}
-			</span>
-		</div>
-		<div class="status-controls">
-			{#if websocketStatus === 'failed' || websocketStatus === 'error' || websocketStatus === 'disconnected'}
-				<button class="reconnect-btn" onclick={retryConnection}> 🔄 Retry </button>
-			{/if}
-			{#if websocketClientId}
-				<div class="client-id">
-					ID: {websocketClientId.slice(-8)}
-				</div>
-			{/if}
-		</div>
-	</div>
+	<Taskbar />
 </div>
 
 <WindowManager />
@@ -558,178 +472,5 @@
 		font-size: 11px;
 		/* word-wrap: ; */
 		line-height: 1.2;
-	}
-
-	.taskbar {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 28px;
-		background: #c0c0c0;
-		border-top: 1px solid #dfdfdf;
-		display: flex;
-		align-items: center;
-		padding: 2px;
-		box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.2);
-	}
-
-	.start-button {
-		height: 24px;
-		padding: 0 8px;
-		border: 1px outset #c0c0c0;
-		background: #c0c0c0;
-		font-size: 11px;
-		font-weight: bold;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.start-button:active {
-		border: 1px inset #c0c0c0;
-	}
-
-	.start-logo {
-		font-size: 14px;
-	}
-
-	.taskbar-buttons {
-		flex: 1;
-		display: flex;
-		gap: 2px;
-		margin-left: 4px;
-	}
-
-	.taskbar-button {
-		height: 22px;
-		padding: 0 8px;
-		border: 1px outset #c0c0c0;
-		background: #c0c0c0;
-		font-size: 11px;
-		cursor: pointer;
-		max-width: 150px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.taskbar-button.active {
-		border: 1px inset #c0c0c0;
-		background: #a0a0a0;
-	}
-
-	.taskbar-button:hover:not(.active) {
-		background: #d4d0c8;
-	}
-
-	.system-tray {
-		height: 24px;
-		padding: 0 8px;
-		border: 1px inset #c0c0c0;
-		background: #c0c0c0;
-		display: flex;
-		align-items: center;
-		font-size: 11px;
-		min-width: 60px;
-	}
-
-	.time {
-		font-family: 'Courier New', monospace;
-	}
-
-	.websocket-status-bar {
-		position: fixed;
-		bottom: 30px; /* Above the taskbar */
-		left: 0;
-		right: 0;
-		height: 20px;
-		background: #d4d0c8;
-		border-top: 1px solid #ffffff;
-		border-bottom: 1px solid #808080;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 8px;
-		font-size: 10px;
-		z-index: 999; /* Below windows but above desktop */
-	}
-
-	.status-indicator {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.status-icon {
-		font-size: 8px;
-		animation: none;
-	}
-
-	.status-icon.connecting {
-		animation: pulse 1.5s infinite;
-	}
-
-	.status-icon.error {
-		animation: blink 1s infinite;
-	}
-
-	@keyframes pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.5;
-		}
-	}
-
-	@keyframes blink {
-		0%,
-		50% {
-			opacity: 1;
-		}
-		51%,
-		100% {
-			opacity: 0.3;
-		}
-	}
-
-	.status-text {
-		font-weight: bold;
-		color: #333;
-		text-transform: uppercase;
-		font-size: 9px;
-	}
-
-	.status-controls {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.reconnect-btn {
-		padding: 2px 6px;
-		border: 1px outset #c0c0c0;
-		background: #c0c0c0;
-		font-size: 8px;
-		cursor: pointer;
-		color: black;
-		white-space: nowrap;
-	}
-
-	.reconnect-btn:hover {
-		background: #d4d0c8;
-	}
-
-	.reconnect-btn:active {
-		border: 1px inset #c0c0c0;
-	}
-
-	.client-id {
-		color: #666;
-		font-family: 'Courier New', monospace;
-		font-size: 8px;
 	}
 </style>

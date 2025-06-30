@@ -8,7 +8,7 @@
 	let imagePreviews = $state([]);
 	let textPreview = $state('');
 
-    /** @param {*} message */
+	/** @param {*} message */
 	function handleWebSocketMessage(message) {
 		switch (message.type) {
 			case 'status':
@@ -56,7 +56,15 @@
 </script>
 
 <div class="container">
-	<div class="mb-4 p-2 rounded" class:bg-green-100={websocketClient.connectionStatus === 'connected'} class:bg-yellow-100={websocketClient.connectionStatus === 'connecting' || websocketClient.connectionStatus === 'reconnecting'} class:bg-red-100={websocketClient.connectionStatus === 'disconnected' || websocketClient.connectionStatus === 'error' || websocketClient.connectionStatus === 'failed'}>
+	<div
+		class="mb-4 p-2 rounded"
+		class:bg-green-100={websocketClient.connectionStatus === 'connected'}
+		class:bg-yellow-100={websocketClient.connectionStatus === 'connecting' ||
+			websocketClient.connectionStatus === 'reconnecting'}
+		class:bg-red-100={websocketClient.connectionStatus === 'disconnected' ||
+			websocketClient.connectionStatus === 'error' ||
+			websocketClient.connectionStatus === 'failed'}
+	>
 		Status: {websocketClient.connectionStatus}
 		{#if websocketClient.isConnecting}
 			<span class="animate-pulse">...</span>

@@ -17,11 +17,11 @@ body {
 		sans-serif;
 	overflow: hidden;
 	background-color: var(--blue);
-    letter-spacing: 2px;
+	letter-spacing: 2px;
 }
 
 h1 {
-    font-weight: 500;
-    font-size: 1.5rem;
-    margin: 0;
+	font-weight: 500;
+	font-size: 1.5rem;
+	margin: 0;
 }

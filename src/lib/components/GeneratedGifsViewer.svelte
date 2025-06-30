@@ -42,9 +42,7 @@
 	<div class="header">
 		<span class="title">🎬 Generated GIFs ({gifs.length})</span>
 		{#if gifs.length > 0}
-			<button class="btn clear-all-btn" onclick={clearAll}>
-				🗑️ Clear All
-			</button>
+			<button class="btn clear-all-btn" onclick={clearAll}> 🗑️ Clear All </button>
 		{/if}
 	</div>
 
@@ -97,10 +95,14 @@
 			<!-- GIFs grid -->
 			<div class="gifs-grid">
 				{#each gifs as gif, index}
-					<div 
-						class="gif-item" 
+					<div
+						class="gif-item"
 						class:selected={index === selectedIndex}
 						onclick={() => selectGif(index)}
+						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectGif(index)}
+						role="button"
+						tabindex="0"
+						aria-label="Select {gif.title || 'GIF ' + (index + 1)}"
 					>
 						<div class="gif-preview">
 							<img src={gif.url} alt={gif.title} />
@@ -113,8 +115,8 @@
 							{/if}
 						</div>
 						<div class="gif-controls">
-							<button 
-								class="btn-small download-btn-small" 
+							<button
+								class="btn-small download-btn-small"
 								onclick={(e) => {
 									e.stopPropagation();
 									downloadGif(gif);
@@ -123,8 +125,8 @@
 							>
 								💾
 							</button>
-							<button 
-								class="btn-small open-btn-small" 
+							<button
+								class="btn-small open-btn-small"
 								onclick={(e) => {
 									e.stopPropagation();
 									openGifInNewWindow(gif);
@@ -133,8 +135,8 @@
 							>
 								🪟
 							</button>
-							<button 
-								class="btn-small delete-btn-small" 
+							<button
+								class="btn-small delete-btn-small"
 								onclick={(e) => {
 									e.stopPropagation();
 									deleteGif(index);
@@ -321,7 +323,8 @@
 		margin-top: 2px;
 	}
 
-	.btn, .btn-small {
+	.btn,
+	.btn-small {
 		padding: 4px 6px;
 		border: 1px outset #c0c0c0;
 		background: #c0c0c0;
@@ -336,11 +339,13 @@
 		font-size: 8px;
 	}
 
-	.btn:hover:not(:disabled), .btn-small:hover:not(:disabled) {
+	.btn:hover:not(:disabled),
+	.btn-small:hover:not(:disabled) {
 		background: #d4d0c8;
 	}
 
-	.btn:active:not(:disabled), .btn-small:active:not(:disabled) {
+	.btn:active:not(:disabled),
+	.btn-small:active:not(:disabled) {
 		border: 1px inset #c0c0c0;
 	}
 
@@ -349,15 +354,18 @@
 		font-weight: bold;
 	}
 
-	.delete-btn, .delete-btn-small {
+	.delete-btn,
+	.delete-btn-small {
 		color: #cc0000;
 	}
 
-	.download-btn, .download-btn-small {
+	.download-btn,
+	.download-btn-small {
 		color: #006600;
 	}
 
-	.open-btn, .open-btn-small {
+	.open-btn,
+	.open-btn-small {
 		color: #0066cc;
 	}
 </style>

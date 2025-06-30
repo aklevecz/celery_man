@@ -1,7 +1,7 @@
 function createGeneratorState() {
 	/** @type {{status: 'identity' | 'loading-celery-man'}} */
 	let generator = $state({
-        status: 'identity'
+		status: 'identity'
 		// status: 'loading-celery-man'
 	});
 

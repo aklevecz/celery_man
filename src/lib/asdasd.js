@@ -3,8 +3,8 @@ import { websocketUrl } from '$lib';
 class WebSocketClient {
 	constructor() {
 		this.ws = null;
-		this.clientId = 'your-client-id-' + Math.random();;
-		this.connectionStatus = 'disconnected'
+		this.clientId = 'your-client-id-' + Math.random();
+		this.connectionStatus = 'disconnected';
 		this.isConnecting = false;
 		this.onMessage = null;
 		this.reconnectAttempts = 0;
@@ -25,7 +25,7 @@ class WebSocketClient {
 			this.connectionStatus = 'connected';
 			this.isConnecting = false;
 			this.reconnectAttempts = 0;
-			
+
 			// Store clientId globally for other parts of the app
 			if (typeof window !== 'undefined' && this.clientId) {
 				window.comfyClientId = this.clientId;
@@ -48,7 +48,7 @@ class WebSocketClient {
 		this.ws.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
 			console.log('Full message:', message);
-			
+
 			if (this.onMessage) {
 				this.onMessage(message);
 			}
@@ -59,7 +59,7 @@ class WebSocketClient {
 		if (this.reconnectAttempts < this.maxReconnectAttempts) {
 			this.reconnectAttempts++;
 			this.connectionStatus = 'reconnecting';
-			
+
 			setTimeout(() => {
 				console.log(`Reconnection attempt ${this.reconnectAttempts}`);
 				this.connect();

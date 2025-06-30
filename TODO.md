@@ -4,10 +4,7 @@
 - make speech transcriber look cooler / integrate it with the good morning paul
 - improve agent responses
 
-
 4d3d3d3
-
-
 
 Is there anyway to generate a nude tayne?
 not computing

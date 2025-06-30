@@ -6,17 +6,24 @@
 	const { Camera } = pkg2;
 	import { queuePrompt } from '$lib/comfy-api';
 	import { userStore } from '$lib/user.svelte.js';
+	/** @type {HTMLVideoElement} */
 	let videoElement;
-	let canvasElement;
+	/** @type {HTMLCanvasElement | undefined} */
+	let canvasElement = $state();
+	/** @type {MediaStream | null} */
 	let stream = null;
 	let isActive = $state(false);
 	let error = $state('');
 	let isLoading = $state(false);
 	let faceDetectionEnabled = $state(false);
+	/** @type {any[]} */
 	let detectedFaces = $state([]);
+	/** @type {any} */
 	let faceDetection = null;
+	/** @type {any} */
 	let camera = null;
 	let modelsLoaded = $state(false);
+	/** @type {Blob | null} */
 	let lastCapturedBlob = $state(null);
 	let lastCapturedType = $state(''); // 'face' or 'screenshot'
 	let lastCapturedTimestamp = $state('');
@@ -41,11 +48,13 @@
 		}
 	}
 
+	/** @param {any} results */
 	function onResults(results) {
 		if (!canvasElement || !videoElement) return;
 
 		const canvas = canvasElement;
 		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
 
 		canvas.width = videoElement.videoWidth;
 		canvas.height = videoElement.videoHeight;
@@ -115,12 +124,16 @@
 			}
 		} catch (err) {
 			console.error('Error accessing camera:', err);
-			if (err.name === 'NotAllowedError') {
-				error = 'Camera access denied. Please allow camera permissions.';
-			} else if (err.name === 'NotFoundError') {
-				error = 'No camera found on this device.';
+			if (err instanceof DOMException) {
+				if (err.name === 'NotAllowedError') {
+					error = 'Camera access denied. Please allow camera permissions.';
+				} else if (err.name === 'NotFoundError') {
+					error = 'No camera found on this device.';
+				} else {
+					error = 'Failed to access camera: ' + err.message;
+				}
 			} else {
-				error = 'Failed to access camera: ' + err.message;
+				error = 'Failed to access camera: Unknown error';
 			}
 		} finally {
 			isLoading = false;
@@ -146,7 +159,9 @@
 		// Clear canvas
 		if (canvasElement) {
 			const ctx = canvasElement.getContext('2d');
-			ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+			if (ctx) {
+				ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+			}
 		}
 	}
 
@@ -163,7 +178,9 @@
 			// Clear canvas
 			if (canvasElement) {
 				const ctx = canvasElement.getContext('2d');
-				ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+				if (ctx) {
+					ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+				}
 			}
 		}
 	}
@@ -174,6 +191,7 @@
 		// Create a temporary canvas to capture the current video frame
 		const tempCanvas = document.createElement('canvas');
 		const tempCtx = tempCanvas.getContext('2d');
+		if (!tempCtx) return;
 		tempCanvas.width = videoElement.videoWidth;
 		tempCanvas.height = videoElement.videoHeight;
 
@@ -185,6 +203,7 @@
 		// Create a new canvas for the cropped face
 		const croppedCanvas = document.createElement('canvas');
 		const croppedCtx = croppedCanvas.getContext('2d');
+		if (!croppedCtx) return;
 
 		// Set cropped canvas size
 		croppedCanvas.width = face.width;
@@ -227,19 +246,26 @@
 			const padding = 0.1;
 			const paddedX = Math.max(0, face.x - face.width * padding);
 			const paddedY = Math.max(0, face.y - face.height * padding);
-			const paddedWidth = Math.min(videoElement.videoWidth - paddedX, face.width * (1 + 2 * padding));
-			const paddedHeight = Math.min(videoElement.videoHeight - paddedY, face.height * (1 + 2 * padding));
+			const paddedWidth = Math.min(
+				videoElement.videoWidth - paddedX,
+				face.width * (1 + 2 * padding)
+			);
+			const paddedHeight = Math.min(
+				videoElement.videoHeight - paddedY,
+				face.height * (1 + 2 * padding)
+			);
 
-			console.log('Padded face area:', { 
-				x: paddedX, 
-				y: paddedY, 
-				width: paddedWidth, 
-				height: paddedHeight 
+			console.log('Padded face area:', {
+				x: paddedX,
+				y: paddedY,
+				width: paddedWidth,
+				height: paddedHeight
 			});
 
 			// Create a canvas for the cropped face (ONLY the face area)
 			const croppedCanvas = document.createElement('canvas');
 			const croppedCtx = croppedCanvas.getContext('2d');
+			if (!croppedCtx) return;
 
 			// Set cropped canvas size to ONLY the face area
 			croppedCanvas.width = paddedWidth;
@@ -250,14 +276,21 @@
 			// Draw ONLY the face area directly from the video element
 			croppedCtx.drawImage(
 				videoElement,
-				paddedX, paddedY, paddedWidth, paddedHeight,  // Source area (face region)
-				0, 0, paddedWidth, paddedHeight               // Destination (full cropped canvas)
+				paddedX,
+				paddedY,
+				paddedWidth,
+				paddedHeight, // Source area (face region)
+				0,
+				0,
+				paddedWidth,
+				paddedHeight // Destination (full cropped canvas)
 			);
 
 			// Convert canvas to blob
-			const blob = await new Promise(resolve => {
+			const blob = await new Promise((resolve) => {
 				croppedCanvas.toBlob(resolve, 'image/png');
 			});
+			if (!blob) return;
 
 			console.log('Blob size:', blob.size, 'bytes');
 
@@ -271,16 +304,16 @@
 			console.log('Face saved to user store');
 
 			// Send to prompt system
-			// await queuePrompt({ 
+			// await queuePrompt({
 			// 	imageBlob: blob,
 			// 	prompt: 'Cropped face from camera'
 			// });
 
 			console.log('Cropped face sent to prompt successfully');
-
 		} catch (error) {
 			console.error('Error sending face to prompt:', error);
-			alert('Failed to send face to prompt: ' + error.message);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			alert('Failed to send face to prompt: ' + message);
 		}
 	}
 
@@ -294,6 +327,7 @@
 			// Create a canvas to capture the current video frame
 			const canvas = document.createElement('canvas');
 			const ctx = canvas.getContext('2d');
+			if (!ctx) return;
 			canvas.width = videoElement.videoWidth;
 			canvas.height = videoElement.videoHeight;
 
@@ -301,9 +335,10 @@
 			ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
 			// Convert canvas to blob
-			const blob = await new Promise(resolve => {
+			const blob = await new Promise((resolve) => {
 				canvas.toBlob(resolve, 'image/png');
 			});
+			if (!blob) return;
 
 			// Cache the captured screenshot
 			lastCapturedBlob = blob;
@@ -311,16 +346,16 @@
 			lastCapturedTimestamp = new Date().toLocaleTimeString();
 
 			// Send to prompt system
-			await queuePrompt({ 
+			await queuePrompt({
 				imageBlob: blob,
 				prompt: 'Screenshot from camera'
 			});
 
 			console.log('Screenshot sent to prompt successfully');
-
 		} catch (error) {
 			console.error('Error sending screenshot to prompt:', error);
-			alert('Failed to send image to prompt: ' + error.message);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			alert('Failed to send image to prompt: ' + message);
 		}
 	}
 
@@ -331,18 +366,19 @@
 		}
 
 		try {
-			const promptText = lastCapturedType === 'face' ? 'Resending cached face' : 'Resending cached screenshot';
-			
-			await queuePrompt({ 
+			const promptText =
+				lastCapturedType === 'face' ? 'Resending cached face' : 'Resending cached screenshot';
+
+			await queuePrompt({
 				imageBlob: lastCapturedBlob,
 				prompt: promptText
 			});
 
 			console.log(`Resent cached ${lastCapturedType} successfully`);
-
 		} catch (error) {
 			console.error('Error resending cached image:', error);
-			alert('Failed to resend cached image: ' + error.message);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			alert('Failed to resend cached image: ' + message);
 		}
 	}
 
@@ -359,16 +395,16 @@
 				return;
 			}
 
-			await queuePrompt({ 
+			await queuePrompt({
 				imageBlob: faceBlob,
 				prompt: 'Using saved face from user profile'
 			});
 
 			console.log('Saved face sent to prompt successfully');
-
 		} catch (error) {
 			console.error('Error using saved face:', error);
-			alert('Failed to use saved face: ' + error.message);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			alert('Failed to use saved face: ' + message);
 		}
 	}
 
@@ -426,7 +462,9 @@
 					<span class="cache-details">
 						{userStore.faceTimestamp}
 					</span>
-					<button class="btn clear-face-btn" onclick={async () => await userStore.clearFace()}>🗑️</button>
+					<button class="btn clear-face-btn" onclick={async () => await userStore.clearFace()}
+						>🗑️</button
+					>
 				</div>
 			{/if}
 		</div>
@@ -527,34 +565,34 @@
 		color: #808080;
 		cursor: not-allowed;
 	}
-	
+
 	.send-face-btn {
 		background: #ffeeaa !important;
 		border-color: #ddcc88 !important;
 	}
-	
+
 	.send-face-btn:hover:not(:disabled) {
 		background: #ffdd88 !important;
 	}
-	
+
 	.resend-btn {
 		background: #eeffaa !important;
 		border-color: #ccdd88 !important;
 	}
-	
+
 	.resend-btn:hover:not(:disabled) {
 		background: #ddff88 !important;
 	}
-	
+
 	.saved-face-btn {
 		background: #aaeeff !important;
 		border-color: #88ccdd !important;
 	}
-	
+
 	.saved-face-btn:hover:not(:disabled) {
 		background: #88ddff !important;
 	}
-	
+
 	.cache-info {
 		background: #f0f0f0;
 		padding: 4px 8px;
@@ -564,31 +602,31 @@
 		flex-direction: column;
 		gap: 4px;
 	}
-	
+
 	.cache-item {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 	}
-	
+
 	.cache-label {
 		font-weight: bold;
 		color: #666;
 	}
-	
+
 	.cache-details {
 		color: #888;
 		font-style: italic;
 		flex: 1;
 	}
-	
+
 	.clear-face-btn {
 		padding: 2px 4px;
 		font-size: 8px;
 		background: #ffcccc !important;
 		border-color: #ddaaaa !important;
 	}
-	
+
 	.clear-face-btn:hover:not(:disabled) {
 		background: #ffaaaa !important;
 	}

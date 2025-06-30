@@ -27,7 +27,7 @@
 					component: GifDisplay,
 					props: {
 						gifUrl: originalGifUrl,
-						alt: "Original GIF"
+						alt: 'Original GIF'
 					}
 				}
 			});
@@ -51,15 +51,9 @@
 	<div class="content">
 		<img src={frameDataUrl} alt="Saved Dancer Frame" class="frame-image" />
 		<div class="controls">
-			<button class="btn download-btn" onclick={downloadDancerFrame}>
-				💾 Download
-			</button>
-			<button class="btn view-btn" onclick={viewOriginalGif}>
-				🎬 View Original GIF
-			</button>
-			<button class="btn clear-btn" onclick={clearDancerFrame}>
-				🗑️ Clear
-			</button>
+			<button class="btn download-btn" onclick={downloadDancerFrame}> 💾 Download </button>
+			<button class="btn view-btn" onclick={viewOriginalGif}> 🎬 View Original GIF </button>
+			<button class="btn clear-btn" onclick={clearDancerFrame}> 🗑️ Clear </button>
 		</div>
 	</div>
 </div>

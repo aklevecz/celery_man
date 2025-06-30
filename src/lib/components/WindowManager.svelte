@@ -3,15 +3,17 @@
 	import Window from './Window.svelte';
 
 	$effect(() => {
+		/** @param {Event} e */
 		function handleClickOutside(e) {
-			const clickedWindow = e.target.closest('.window');
+			const clickedWindow =
+				e.target && e.target instanceof Element ? e.target.closest('.window') : null;
 			if (!clickedWindow && windowManager.windows.length > 0) {
 				return;
 			}
 		}
 
 		document.addEventListener('mousedown', handleClickOutside);
-		
+
 		return () => {
 			document.removeEventListener('mousedown', handleClickOutside);
 		};
@@ -33,9 +35,8 @@
 		{#if typeof window.content === 'string'}
 			<div>{@html window.content}</div>
 		{:else if window.content && typeof window.content === 'object' && window.content.component}
-			<svelte:component this={window.content.component} {...window.content.props || {}} />
-		{:else}
-			{@render window.content?.()}
+			{@const Component = window.content.component}
+			<Component {...window.content.props || {}} />
 		{/if}
 	</Window>
 {/each}

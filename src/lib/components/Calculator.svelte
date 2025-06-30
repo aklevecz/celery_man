@@ -1,11 +1,14 @@
 <script>
 	let display = $state('0');
+	/** @type {string | null} */
 	let operation = $state(null);
+	/** @type {number | null} */
 	let previousValue = $state(null);
 	let waitingForOperand = $state(false);
 
+	/** @param {string | number} num */
 	function inputNumber(num) {
-		console.log(num)
+		console.log(num);
 		if (waitingForOperand) {
 			display = String(num);
 			waitingForOperand = false;
@@ -14,6 +17,7 @@
 		}
 	}
 
+	/** @param {string} nextOperation */
 	function inputOperation(nextOperation) {
 		const inputValue = parseFloat(display);
 
@@ -31,6 +35,11 @@
 		operation = nextOperation;
 	}
 
+	/**
+	 * @param {number} firstValue
+	 * @param {number} secondValue
+	 * @param {string} operation
+	 */
 	function calculate(firstValue, secondValue, operation) {
 		switch (operation) {
 			case '+':
@@ -83,22 +92,22 @@
 		<button class="btn" onclick={toggleSign}>±</button>
 		<button class="btn" onclick={inputPercent}>%</button>
 		<button class="btn operator" onclick={() => inputOperation('÷')}>÷</button>
-		
+
 		<button class="btn" onclick={() => inputNumber(7)}>7</button>
 		<button class="btn" onclick={() => inputNumber(8)}>8</button>
 		<button class="btn" onclick={() => inputNumber(9)}>9</button>
 		<button class="btn operator" onclick={() => inputOperation('×')}>×</button>
-		
+
 		<button class="btn" onclick={() => inputNumber(4)}>4</button>
 		<button class="btn" onclick={() => inputNumber(5)}>5</button>
 		<button class="btn" onclick={() => inputNumber(6)}>6</button>
 		<button class="btn operator" onclick={() => inputOperation('-')}>-</button>
-		
+
 		<button class="btn" onclick={() => inputNumber(1)}>1</button>
 		<button class="btn" onclick={() => inputNumber(2)}>2</button>
 		<button class="btn" onclick={() => inputNumber(3)}>3</button>
 		<button class="btn operator" onclick={() => inputOperation('+')}>+</button>
-		
+
 		<button class="btn zero" onclick={() => inputNumber(0)}>0</button>
 		<button class="btn" onclick={() => inputNumber('.')}>.</button>
 		<button class="btn operator" onclick={performCalculation}>=</button>

@@ -97,7 +97,7 @@ async function queuePrompt({
 		],
 		oyster: ['oyster_1.mp4', 'oyster_2.mp4']
 	};
-	console.log(parsedDancer);
+	// @ts-ignore
 	const dancersOptions = allVideos[parsedDancer];
 	console.log(dancersOptions);
 	const dancerVideo = dancersOptions[Math.floor(Math.random() * dancersOptions.length)];

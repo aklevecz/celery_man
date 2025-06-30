@@ -13,7 +13,6 @@
 	let hasGlobalSelection = $derived(userStore.hasGlobalSelection);
 	let selectedImageInfo = $derived(userStore.getGloballySelectedImageInfo());
 	let selectedImageType = $derived(userStore.selectedImageType);
-	let selectedImageId = $derived(userStore.selectedImageId);
 
 	async function generateImage() {
 		if (!prompt.trim()) {
@@ -22,7 +21,8 @@
 		}
 
 		if (!hasGlobalSelection) {
-			error = 'No image selected. Please select an image from the "All Images" gallery to use as reference.';
+			error =
+				'No image selected. Please select an image from the "All Images" gallery to use as reference.';
 			return;
 		}
 
@@ -38,7 +38,10 @@
 			}
 
 			console.log('Generating Flux image with prompt:', prompt);
-			console.log(`Using globally selected ${selectedImageType} image as reference:`, selectedImageInfo?.title);
+			console.log(
+				`Using globally selected ${selectedImageType} image as reference:`,
+				selectedImageInfo?.title
+			);
 
 			await queueFluxPrompt({
 				prompt: prompt.trim(),
@@ -47,10 +50,10 @@
 
 			success = 'Flux image generation started! Check the loading window for progress.';
 			console.log('Flux generation queued successfully');
-
 		} catch (err) {
 			console.error('Error generating Flux image:', err);
-			error = 'Failed to generate image: ' + err.message;
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			error = 'Failed to generate image: ' + message;
 		} finally {
 			isGenerating = false;
 		}
@@ -87,10 +90,7 @@
 					<span class="reference-title">{selectedImageInfo.title}</span>
 					<span class="reference-timestamp">{selectedImageInfo.timestamp}</span>
 				</div>
-				<button 
-					class="btn preview-btn" 
-					onclick={() => previewImage = !previewImage}
-				>
+				<button class="btn preview-btn" onclick={() => (previewImage = !previewImage)}>
 					{previewImage ? '🙈 Hide' : '👁️ Show'}
 				</button>
 			</div>
@@ -103,9 +103,7 @@
 	{/if}
 
 	<div class="prompt-section">
-		<label for="flux-prompt" class="prompt-label">
-			✨ Image Prompt:
-		</label>
+		<label for="flux-prompt" class="prompt-label"> ✨ Image Prompt: </label>
 		<textarea
 			id="flux-prompt"
 			bind:value={prompt}
@@ -116,8 +114,8 @@
 	</div>
 
 	<div class="controls">
-		<button 
-			class="btn generate-btn" 
+		<button
+			class="btn generate-btn"
 			onclick={generateImage}
 			disabled={isGenerating || !hasGlobalSelection || !prompt.trim()}
 		>
@@ -127,11 +125,9 @@
 				🚀 Generate Image
 			{/if}
 		</button>
-		
+
 		{#if error || success}
-			<button class="btn clear-btn" onclick={clearMessages}>
-				🗑️ Clear
-			</button>
+			<button class="btn clear-btn" onclick={clearMessages}> 🗑️ Clear </button>
 		{/if}
 	</div>
 
@@ -151,8 +147,9 @@
 		<div class="no-selection-info">
 			<div class="info-icon">📝</div>
 			<div class="info-text">
-				<strong>No image selected</strong><br>
-				Go to "All Images" gallery and select an image (face, dancer frame, or edited image) to use as reference for Flux generation.
+				<strong>No image selected</strong><br />
+				Go to "All Images" gallery and select an image (face, dancer frame, or edited image) to use as
+				reference for Flux generation.
 			</div>
 		</div>
 	{/if}

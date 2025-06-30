@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { FunctionCallingConfigMode, GoogleGenAI, Type } from '@google/genai';
 import { PUBLIC_GEMINI_API_KEY } from '$env/static/public';
 
 const geminiModels = {
@@ -82,15 +82,15 @@ function createAgent() {
 	let state = $state('idle');
 	/** @type {Message[]} */
 	let messages = $state([]);
-	
+
 	// Improved dancer name mapping with more variations
 	const dancerNameMapping = {
-		'celeryman': ['celery', 'celery man', 'celeryman'],
-		'tayne': ['tayne', 'tane', 'tain'],
-		'oyster': ['oyster', 'oysters'],
-		'paulrudd': ['paul', 'rudd', 'paul rudd']
+		celeryman: ['celery', 'celery man', 'celeryman'],
+		tayne: ['tayne', 'tane', 'tain'],
+		oyster: ['oyster', 'oysters'],
+		paulrudd: ['paul', 'rudd', 'paul rudd']
 	};
-	
+
 	/**
 	 * Maps a raw dancer name to a normalized dancer key
 	 * @param {string} rawName
@@ -98,7 +98,7 @@ function createAgent() {
 	 */
 	function normalizeDancerName(rawName) {
 		const lowerName = rawName.toLowerCase();
-		
+
 		for (const [key, variations] of Object.entries(dancerNameMapping)) {
 			for (const variation of variations) {
 				if (lowerName.includes(variation)) {
@@ -106,10 +106,10 @@ function createAgent() {
 				}
 			}
 		}
-		
+
 		return null;
 	}
-	
+
 	let agent = {
 		get state() {
 			return state;
@@ -165,7 +165,9 @@ ALWAYS respond with a function call. Include a friendly acknowledgment in model_
 						},
 						{
 							role: 'model',
-							parts: [{ text: 'I understand. I will always call a function based on user commands.' }]
+							parts: [
+								{ text: 'I understand. I will always call a function based on user commands.' }
+							]
 						},
 						{
 							role: 'user',
@@ -182,74 +184,79 @@ ALWAYS respond with a function call. Include a friendly acknowledgment in model_
 						],
 						toolConfig: {
 							functionCallingConfig: {
-								mode: 'ANY', // Force function calling
+								mode: FunctionCallingConfigMode.ANY, // Force function calling
 								allowedFunctionNames: ['show_entity', 'edit_entity']
 							}
 						}
 					}
 				});
-				
+
 				// Log the full response for debugging
 				console.log('Full Gemini response:', JSON.stringify(result, null, 2));
-				
+
 				const functionCalls = result.functionCalls;
-				
+
 				if (!functionCalls || functionCalls.length === 0) {
 					console.error('No function calls returned by Gemini');
 					// Fallback: try to parse the intent manually
 					const lowerPrompt = prompt.toLowerCase();
-					const isEdit = lowerPrompt.includes('edit') || 
-					              lowerPrompt.includes('wear') || 
-					              lowerPrompt.includes('put') || 
-					              lowerPrompt.includes('make') ||
-					              lowerPrompt.includes('change');
-					
+					const isEdit =
+						lowerPrompt.includes('edit') ||
+						lowerPrompt.includes('wear') ||
+						lowerPrompt.includes('put') ||
+						lowerPrompt.includes('make') ||
+						lowerPrompt.includes('change');
+
 					return {
 						dancer: null,
 						danceType: null,
-						modelResponse: 'I couldn\'t process that command properly. Please try again.',
+						modelResponse: "I couldn't process that command properly. Please try again.",
 						editPrompt: null,
 						isEdit: isEdit
 					};
 				}
-				
+
 				// Process all function calls (in case there are multiple)
 				for (const functionCall of functionCalls) {
 					console.log(`Processing function call: ${functionCall.name}`, functionCall.args);
-					
+
 					if (functionCall.name === 'show_entity' && functionCall.args) {
 						const { dancer_name, type_of_dance, model_response } = functionCall.args;
-						
+
 						if (typeof dancer_name === 'string') {
 							const dancer = normalizeDancerName(dancer_name);
-							
+
 							return {
 								dancer,
 								danceType: type_of_dance || null,
-								modelResponse: model_response || `Showing ${dancer_name}`,
+								modelResponse:
+									(typeof model_response === 'string' ? model_response : null) ||
+									`Showing ${dancer_name}`,
 								editPrompt: null,
 								isEdit: false
 							};
 						}
 					}
-					
+
 					if (functionCall.name === 'edit_entity' && functionCall.args) {
 						const { dancer_name, edit_prompt, model_response } = functionCall.args;
-						
+
 						if (typeof dancer_name === 'string' && typeof edit_prompt === 'string') {
 							const dancer = normalizeDancerName(dancer_name);
-							
+
 							return {
 								dancer,
 								danceType: null,
-								modelResponse: model_response || `Editing ${dancer_name}`,
+								modelResponse:
+									(typeof model_response === 'string' ? model_response : null) ||
+									`Editing ${dancer_name}`,
 								editPrompt: edit_prompt,
 								isEdit: true
 							};
 						}
 					}
 				}
-				
+
 				// If we get here, function calls were malformed
 				console.error('Function calls were malformed:', functionCalls);
 				return {
@@ -259,7 +266,6 @@ ALWAYS respond with a function call. Include a friendly acknowledgment in model_
 					editPrompt: null,
 					isEdit: false
 				};
-				
 			} catch (error) {
 				console.error('Error calling Gemini:', error);
 				return {

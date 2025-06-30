@@ -1,5 +1,5 @@
 <script>
-	let { gifUrl, alt = "Generated GIF" } = $props();
+	let { gifUrl, alt = 'Generated GIF' } = $props();
 </script>
 
 <div class="gif-display">

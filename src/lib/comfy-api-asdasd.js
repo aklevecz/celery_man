@@ -1,5 +1,5 @@
-import { fetchUrl } from "$lib";
-import { testText } from "./prompts";
+import { fetchUrl } from '$lib';
+import { testText } from './prompts';
 
 async function queuePrompt(promptText = testText) {
 	const prompt = { ...promptText };
@@ -22,7 +22,7 @@ async function queuePrompt(promptText = testText) {
 		body: JSON.stringify(p)
 	});
 
-    return response
+	return response;
 }
 
-export { queuePrompt }
+export { queuePrompt };

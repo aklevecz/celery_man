@@ -24,12 +24,12 @@
 		if (e.target.closest('.window-controls') || e.target.closest('.resize-handle')) {
 			return;
 		}
-		
+
 		windowManager.focusWindow(windowId);
 		isDragging = true;
 		dragOffset.x = e.clientX - x;
 		dragOffset.y = e.clientY - y;
-		
+
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
 		e.preventDefault();
@@ -58,13 +58,13 @@
 	/** @param {*} e */
 	function handleResizeStart(e) {
 		if (isMaximized) return;
-		
+
 		isResizing = true;
 		resizeStart.x = e.clientX;
 		resizeStart.y = e.clientY;
 		resizeStart.width = width;
 		resizeStart.height = height;
-		
+
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
 		e.preventDefault();
@@ -89,9 +89,9 @@
 </script>
 
 {#if !isMinimized}
-<div 
-	class="window"
-	style="
+	<div
+		class="window"
+		style="
 		left: {x}px; 
 		top: {y}px; 
 		width: {width}px; 
@@ -99,36 +99,47 @@
 		z-index: {zIndex};
 		position: fixed;
 	"
-	role="dialog"
-	aria-label={title}
->
-	<div 
-		class="window-header" 
-		onmousedown={handleMouseDown}
-		ondblclick={handleDoubleClick}
+		role="dialog"
+		aria-label={title}
 	>
-		<div class="window-title">{title}</div>
-		<div class="window-controls">
-			<button class="window-button minimize-btn" onclick={minimize} aria-label="Minimize">_</button>
-			<button class="window-button maximize-btn" onclick={maximize} aria-label={isMaximized ? 'Restore' : 'Maximize'}>
-				{isMaximized ? '❐' : '□'}
-			</button>
-			<button class="window-button close-btn" onclick={close} aria-label="Close">×</button>
-		</div>
-	</div>
-	
-	<div class="window-content">
-		{@render children?.()}
-	</div>
-	
-	{#if !isMaximized}
 		<div 
+		class="window-header" 
+		onmousedown={handleMouseDown} 
+		ondblclick={handleDoubleClick}
+		role="button"
+		tabindex="0"
+		aria-label="Drag to move window, double-click to maximize"
+	>
+			<div class="window-title">{title}</div>
+			<div class="window-controls">
+				<button class="window-button minimize-btn" onclick={minimize} aria-label="Minimize"
+					>_</button
+				>
+				<button
+					class="window-button maximize-btn"
+					onclick={maximize}
+					aria-label={isMaximized ? 'Restore' : 'Maximize'}
+				>
+					{isMaximized ? '❐' : '□'}
+				</button>
+				<button class="window-button close-btn" onclick={close} aria-label="Close">×</button>
+			</div>
+		</div>
+
+		<div class="window-content">
+			{@render children?.()}
+		</div>
+
+		{#if !isMaximized}
+			<div 
 			class="resize-handle" 
-			onmousedown={handleResizeStart}
+			onmousedown={handleResizeStart} 
+			role="button"
+			tabindex="0"
 			aria-label="Resize window"
 		></div>
-	{/if}
-</div>
+		{/if}
+	</div>
 {/if}
 
 <style>
@@ -153,10 +164,6 @@
 		font-weight: bold;
 	}
 
-	.window:not(.active) .window-header {
-		/* background: linear-gradient(90deg, #808080 0%, #c0c0c0 100%); */
-		/* color: #808080; */
-	}
 
 	.window-title {
 		overflow: hidden;

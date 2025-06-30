@@ -1,5 +1,5 @@
 <script>
-	let { imageUrl, alt = "Generated Image" } = $props();
+	let { imageUrl, alt = 'Generated Image' } = $props();
 </script>
 
 <div class="image-display">

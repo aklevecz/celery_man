@@ -8,7 +8,7 @@
 
 	/** @type {TypewriterProps} */
 	let { messages = [], delay = 100, onComplete = null } = $props();
-	
+
 	/** @type {string} */
 	let typewriterText = $state('');
 	/** @type {number} */
@@ -19,7 +19,7 @@
 	let isTyping = $state(false);
 	/** @type {number | null} */
 	let typeInterval = null;
-	
+
 	/**
 	 * Start typing animation with new messages
 	 * @param {string | string[]} newMessages - Message(s) to type out
@@ -28,16 +28,16 @@
 		if (typeInterval) {
 			clearInterval(typeInterval);
 		}
-		
+
 		// Reset state
 		typewriterText = '';
 		currentMessageIndex = 0;
 		currentCharIndex = 0;
 		isTyping = true;
-		
+
 		/** @type {string[]} */
 		const messagesToType = Array.isArray(newMessages) ? newMessages : [newMessages];
-		
+
 		typeInterval = setInterval(() => {
 			if (currentMessageIndex >= messagesToType.length) {
 				clearInterval(typeInterval);
@@ -45,10 +45,10 @@
 				if (onComplete) onComplete();
 				return;
 			}
-			
+
 			/** @type {string} */
 			const currentMessage = messagesToType[currentMessageIndex];
-			
+
 			if (currentCharIndex < currentMessage.length) {
 				typewriterText += currentMessage[currentCharIndex];
 				currentCharIndex++;
@@ -66,14 +66,14 @@
 			}
 		}, delay);
 	}
-	
+
 	// Auto-start if messages are provided as props
 	$effect(() => {
 		if (messages.length > 0) {
 			startTyping(messages);
 		}
 	});
-	
+
 	// Expose the startTyping function for parent components
 	export { startTyping };
 </script>
@@ -95,22 +95,28 @@
 		min-height: 60px;
 		white-space: pre-wrap;
 	}
-	
+
 	.typewriter {
 		line-height: 1.4;
 	}
-	
+
 	.cursor {
 		opacity: 0;
 		animation: blink 1s infinite;
 	}
-	
+
 	.cursor.visible {
 		opacity: 1;
 	}
-	
+
 	@keyframes blink {
-		0%, 50% { opacity: 1; }
-		51%, 100% { opacity: 0; }
+		0%,
+		50% {
+			opacity: 1;
+		}
+		51%,
+		100% {
+			opacity: 0;
+		}
 	}
 </style>

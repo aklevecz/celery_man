@@ -1,8 +1,14 @@
 /**
+ * @typedef {Object} WindowComponentContent
+ * @property {any} component - The Svelte component constructor
+ * @property {Object} [props] - Props to pass to the component
+ */
+
+/**
  * @typedef {Object} AppWindow
  * @property {string} id
  * @property {string} title
- * @property {string | {component: import('svelte').SvelteComponent, props?: Object}} content
+ * @property {string | WindowComponentContent} content
  * @property {number} width
  * @property {number} height
  * @property {number} x
@@ -36,7 +42,7 @@ function createWindowManager() {
 	let zIndexCounter = 1000;
 
 	const LOCAL_STORAGE_KEY = 'window_manager_state';
-	
+
 	// Registry to map window IDs to their creation functions
 	const windowCreators = new Map();
 
@@ -59,7 +65,7 @@ function createWindowManager() {
 
 		try {
 			/** @type {SerializableWindow[]} */
-			const serializableWindows = windows.map(win => ({
+			const serializableWindows = windows.map((win) => ({
 				id: win.id,
 				title: win.title,
 				width: win.width,
@@ -111,9 +117,9 @@ function createWindowManager() {
 				if (creator) {
 					// Recreate the window using its creator function
 					creator();
-					
+
 					// Update the recreated window with saved state
-					const restoredWindow = windows.find(w => w.id === savedWindow.id);
+					const restoredWindow = windows.find((w) => w.id === savedWindow.id);
 					if (restoredWindow) {
 						restoredWindow.width = savedWindow.width;
 						restoredWindow.height = savedWindow.height;
@@ -143,7 +149,7 @@ function createWindowManager() {
 
 	/**
 	 * Create a new window
-	 * @param {{ id?: string, title: string, content: string|{component: import('svelte').SvelteComponent, props?: Object}, width?: number, height?: number, x?: number, y?: number }} options
+	 * @param {{ id?: string, title: string, content: string|WindowComponentContent, width?: number, height?: number, x?: number, y?: number }} options
 	 * @returns {string} The id of the created window
 	 */
 	function createWindow({ id, title, content, width = 400, height = 300, x = 100, y = 100 }) {

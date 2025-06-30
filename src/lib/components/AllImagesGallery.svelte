@@ -2,6 +2,7 @@
 	import { userStore } from '$lib/user.svelte.js';
 
 	// Derived state for all images
+	/** @type {Array<{id: string, type: string, dataUrl: string, timestamp: string, title: string, description: string, isSelected: boolean}>} */
 	let allImages = $derived.by(() => {
 		const images = [];
 
@@ -33,24 +34,29 @@
 				timestamp: userStore.dancerFrameTimestamp,
 				title: 'Dancer Frame',
 				description: 'First frame from generated dance',
-				isSelected: userStore.selectedImageType === 'dancer-frame' && userStore.selectedImageId === 'dancer-frame'
+				isSelected:
+					userStore.selectedImageType === 'dancer-frame' &&
+					userStore.selectedImageId === 'dancer-frame'
 			});
 			console.log('Added dancer frame');
 		}
 
 		// Add all edited images
-		userStore.editedImages.forEach((editedImage, index) => {
-			images.push({
-				id: editedImage.id,
-				type: 'edited',
-				dataUrl: editedImage.dataUrl,
-				timestamp: editedImage.timestamp,
-				title: `Edited Image #${index + 1}`,
-				description: editedImage.prompt || 'Generated image',
-				isSelected: userStore.selectedImageType === 'edited' && userStore.selectedImageId === editedImage.id
-			});
-			console.log(`Added edited image ${index + 1}`);
-		});
+		userStore.editedImages.forEach(
+			(/** @type {any} */ editedImage, /** @type {number} */ index) => {
+				images.push({
+					id: editedImage.id,
+					type: 'edited',
+					dataUrl: editedImage.dataUrl,
+					timestamp: editedImage.timestamp,
+					title: `Edited Image #${index + 1}`,
+					description: editedImage.prompt || 'Generated image',
+					isSelected:
+						userStore.selectedImageType === 'edited' && userStore.selectedImageId === editedImage.id
+				});
+				console.log(`Added edited image ${index + 1}`);
+			}
+		);
 
 		console.log('Total images:', images.length);
 
@@ -62,7 +68,8 @@
 	function selectImage(imageId) {
 		console.log(`Trying to select image ${imageId}`);
 		// Find the image and handle selection based on type
-		const image = allImages.find((img) => img.id === imageId);
+		/** @type {any} */
+		const image = allImages.find((/** @type {any} */ img) => img.id === imageId);
 		console.log(image);
 		if (!image) return;
 
@@ -73,7 +80,7 @@
 
 	/** @param {string} imageId */
 	function downloadImage(imageId) {
-		const image = allImages.find((img) => img.id === imageId);
+		const image = allImages.find((/** @type {any} */ img) => img.id === imageId);
 		if (!image) return;
 
 		switch (image.type) {
@@ -84,7 +91,9 @@
 				userStore.downloadDancerFrame();
 				break;
 			case 'edited':
-				const editedIndex = userStore.editedImages.findIndex((img) => img.id === imageId);
+				const editedIndex = userStore.editedImages.findIndex(
+					(/** @type {any} */ img) => img.id === imageId
+				);
 				if (editedIndex >= 0) {
 					userStore.downloadEditedImage(editedIndex);
 				}
@@ -94,7 +103,7 @@
 
 	/** @param {string} imageId */
 	async function deleteImage(imageId) {
-		const image = allImages.find((img) => img.id === imageId);
+		const image = allImages.find((/** @type {any} */ img) => img.id === imageId);
 		if (!image) return;
 
 		const confirmMessage = `Are you sure you want to delete "${image.title}"?`;
@@ -108,7 +117,9 @@
 				await userStore.clearDancerFrame();
 				break;
 			case 'edited':
-				const editedIndex = userStore.editedImages.findIndex((img) => img.id === imageId);
+				const editedIndex = userStore.editedImages.findIndex(
+					(/** @type {any} */ img) => img.id === imageId
+				);
 				if (editedIndex >= 0) {
 					await userStore.deleteEditedImage(editedIndex);
 				}
@@ -183,7 +194,14 @@
 						{/if}
 					</div>
 
-					<div class="image-preview" onclick={() => selectImage(image.id)}>
+					<div 
+						class="image-preview" 
+						onclick={() => selectImage(image.id)}
+						onkeydown={(e) => e.key === 'Enter' && selectImage(image.id)}
+						role="button"
+						tabindex="0"
+						aria-label="Select {image.title}"
+					>
 						<img src={image.dataUrl} alt={image.title} />
 					</div>
 

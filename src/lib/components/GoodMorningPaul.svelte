@@ -1,7 +1,7 @@
 <script>
 	import Typewriter from './Typewriter.svelte';
 
-	/** @type {import('./Typewriter.svelte').default} */
+	/** @type {any} */
 	let typewriter;
 
 	/** @type {HTMLAudioElement | null} */
@@ -10,8 +10,8 @@
 	function triggerMessage1() {
 		typewriter.startTyping(['Good morning Paul.']);
 
-		audio = /** @type {HTMLAudioElement | null} */ (document.getElementById('good-morning-paul'));
-		if (audio) {
+		audio = document.getElementById('good-morning-paul');
+		if (audio && audio instanceof HTMLAudioElement) {
 			audio.play();
 		}
 	}
@@ -19,8 +19,8 @@
 	function triggerMessage2() {
 		typewriter.startTyping(['What will your first sequence of the day be']);
 
-		const audioElement = /** @type {HTMLAudioElement | null} */ (document.getElementById('first-sequence-of-the-day'));
-		if (audioElement) {
+		const audioElement = document.getElementById('first-sequence-of-the-day');
+		if (audioElement && audioElement instanceof HTMLAudioElement) {
 			audioElement.play();
 		}
 	}
@@ -28,8 +28,8 @@
 	function triggerMessage3() {
 		typewriter.startTyping(['Yes Paul.']);
 
-		const audioElement = /** @type {HTMLAudioElement | null} */ (document.getElementById('yes-paul'));
-		if (audioElement) {
+		const audioElement = document.getElementById('yes-paul');
+		if (audioElement && audioElement instanceof HTMLAudioElement) {
 			audioElement.play();
 		}
 	}
@@ -79,7 +79,4 @@
 		border: 1px inset #c0c0c0;
 	}
 
-	.audio {
-		width: 100%;
-	}
 </style>

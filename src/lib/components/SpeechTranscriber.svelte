@@ -48,60 +48,60 @@
 				console.log('Speech recognition started');
 			};
 
-		/** @param {*} event */
-		recognition.onresult = (event) => {
-			let interim = '';
-			let final = '';
+			/** @param {*} event */
+			recognition.onresult = (event) => {
+				let interim = '';
+				let final = '';
 
-			for (let i = event.resultIndex; i < event.results.length; i++) {
-				const transcript = event.results[i][0].transcript;
+				for (let i = event.resultIndex; i < event.results.length; i++) {
+					const transcript = event.results[i][0].transcript;
 
-				if (event.results[i].isFinal) {
-					final += transcript;
-				} else {
-					interim += transcript;
+					if (event.results[i].isFinal) {
+						final += transcript;
+					} else {
+						interim += transcript;
+					}
 				}
-			}
 
-			// Update the transcripts
-			if (final) {
-				finalTranscript += final;
-				transcription = finalTranscript;
-			}
+				// Update the transcripts
+				if (final) {
+					finalTranscript += final;
+					transcription = finalTranscript;
+				}
 
-			interimTranscript = interim;
+				interimTranscript = interim;
 
-			// Combine final and interim for display
-			const displayText = finalTranscript + (interim ? ' ' + interim : '');
-			transcription = displayText;
+				// Combine final and interim for display
+				const displayText = finalTranscript + (interim ? ' ' + interim : '');
+				transcription = displayText;
 
-			// Check for "please" trigger only once
-			if (!isProcessingStop && transcription.toLowerCase().includes('please')) {
-				// isProcessingStop = true;
-				recognition.stop();
-				stopListening();
-			}
-		};
+				// Check for "please" trigger only once
+				if (!isProcessingStop && transcription.toLowerCase().includes('please')) {
+					// isProcessingStop = true;
+					recognition.stop();
+					stopListening();
+				}
+			};
 
-		/** @param {*} event */
-		recognition.onerror = (event) => {
-			console.error('Speech recognition error:', event.error);
-			error = `Recognition error: ${event.error}`;
-			isListening = false;
-		};
+			/** @param {*} event */
+			recognition.onerror = (event) => {
+				console.error('Speech recognition error:', event.error);
+				error = `Recognition error: ${event.error}`;
+				isListening = false;
+			};
 
-		recognition.onend = () => {
-			console.log('Speech recognition ended');
-			isListening = false;
-		};
+			recognition.onend = () => {
+				console.log('Speech recognition ended');
+				isListening = false;
+			};
 
-		// Mark setup as complete
-		isSetupComplete = true;
-		console.log('Speech recognition setup complete');
-		
+			// Mark setup as complete
+			isSetupComplete = true;
+			console.log('Speech recognition setup complete');
 		} catch (setupError) {
 			console.error('Error setting up speech recognition:', setupError);
-			error = 'Failed to setup speech recognition: ' + setupError.message;
+			const message = setupError instanceof Error ? setupError.message : 'Unknown error';
+			error = 'Failed to setup speech recognition: ' + message;
 		}
 	}
 
@@ -118,9 +118,10 @@
 			error = '';
 			isProcessingStop = false; // Reset the flag
 			recognition.start();
-		} catch (/** @type {*} */ err) {
+		} catch (err) {
 			console.error('Error starting recognition:', err);
-			error = 'Failed to start listening: ' + err.message;
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			error = 'Failed to start listening: ' + message;
 		}
 	}
 
@@ -148,7 +149,8 @@
 		// 	queuePrompt({ workflow: celeryMan, dancer });
 		// }
 		console.log(`Final transcript: ${transcription}`);
-		let { dancer, danceType, modelResponse, editPrompt, isEdit } = await agent.sendChatMessage(transcription);
+		let { dancer, modelResponse, editPrompt, isEdit } =
+			await agent.sendChatMessage(transcription);
 		console.log(`Dancer: ${dancer}`);
 		if (modelResponse) {
 			// Use the browser Speech Synthesis API with Eddy en-US voice
@@ -191,20 +193,23 @@
 			if (isEdit && editPrompt) {
 				// Handle edit request - use Flux with globally selected image
 				console.log(`Edit request: ${editPrompt}`);
-				
+
 				let imageBlob = null;
-				
+
 				// Try to use globally selected image first
 				if (userStore.hasGlobalSelection) {
 					try {
 						imageBlob = await userStore.getGloballySelectedImageBlob();
 						const selectedInfo = userStore.getGloballySelectedImageInfo();
-						console.log(`Using globally selected ${selectedInfo?.type} image for editing:`, selectedInfo?.title);
-					} catch (error) {
-						console.error('Error getting globally selected image blob:', error);
+						console.log(
+							`Using globally selected ${selectedInfo?.type} image for editing:`,
+							selectedInfo?.title
+						);
+					} catch (err) {
+						console.error('Error getting globally selected image blob:', err);
 					}
 				}
-				
+
 				// // Fall back to dancer frame if no global selection
 				// if (!imageBlob && userStore.hasDancerFrame) {
 				// 	try {
@@ -214,7 +219,7 @@
 				// 		console.error('Error getting dancer frame blob:', error);
 				// 	}
 				// }
-				
+
 				// // Last fallback to face if available
 				// if (!imageBlob && userStore.hasFace) {
 				// 	try {
@@ -224,7 +229,7 @@
 				// 		console.error('Error getting face blob:', error);
 				// 	}
 				// }
-				
+
 				if (imageBlob) {
 					await queueFluxPrompt({
 						prompt: editPrompt,
@@ -241,8 +246,8 @@
 					try {
 						faceBlob = await userStore.getFaceBlob();
 						console.log('Using saved face blob for generation');
-					} catch (error) {
-						console.error('Error getting saved face blob:', error);
+					} catch (err) {
+						console.error('Error getting saved face blob:', err);
 					}
 				}
 
@@ -332,8 +337,8 @@
 					try {
 						faceBlob = await userStore.getFaceBlob();
 						console.log('Using saved face blob for generation');
-					} catch (error) {
-						console.error('Error getting saved face blob:', error);
+					} catch (err) {
+						console.error('Error getting saved face blob:', err);
 					}
 				}
 
@@ -438,8 +443,13 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.5; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
 	}
 
 	@keyframes blink {
@@ -570,9 +580,6 @@
 		font-weight: bold;
 	}
 
-	.cursor.visible {
-		opacity: 1;
-	}
 
 	@keyframes cursor-blink {
 		0%,

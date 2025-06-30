@@ -18,7 +18,7 @@
 
 	function updatePercentage() {
 		// TODO: update percentage
-        return '70%';
+		return '70%';
 	}
 </script>
 
