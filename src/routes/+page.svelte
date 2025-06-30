@@ -1,21 +1,24 @@
 <script>
 	import { fetchUrl } from '$lib';
-	import AllImagesGallery from '$lib/components/AllImagesGallery.svelte';
-	import Calculator from '$lib/components/Calculator.svelte';
-	import Camera from '$lib/components/Camera.svelte';
-	import CincoIdentityGenerator from '$lib/components/CincoIdentityGenerator.svelte';
-	import DancerFrameViewer from '$lib/components/DancerFrameViewer.svelte';
-	import EditedImagesViewer from '$lib/components/EditedImagesViewer.svelte';
-	import FluxImageGenerator from '$lib/components/FluxImageGenerator.svelte';
-	import GeneratedGifsViewer from '$lib/components/GeneratedGifsViewer.svelte';
 	import GifDisplay from '$lib/components/GifDisplay.svelte';
-	import GoodMorningPaul from '$lib/components/GoodMorningPaul.svelte';
 	import ImageDisplay from '$lib/components/ImageDisplay.svelte';
-	import SpeechTranscriber from '$lib/components/SpeechTranscriber.svelte';
 	import WindowManager from '$lib/components/WindowManager.svelte';
 	import { userStore } from '$lib/user.svelte.js';
 	import { websocketClient } from '$lib/websocket-client';
 	import { windowManager } from '$lib/window-manager.svelte.js';
+	import NotepadController from '$lib/windows/notepad/NotepadController.svelte';
+	import CalculatorController from '$lib/windows/calculator/CalculatorController.svelte';
+	import CameraController from '$lib/windows/camera/CameraController.svelte';
+	import SpeechTranscriberController from '$lib/windows/speech-transcriber/SpeechTranscriberController.svelte';
+	import CincoIdentityGeneratorController from '$lib/windows/cinco-identity-generator/CincoIdentityGeneratorController.svelte';
+	import DancerFrameViewerController from '$lib/windows/dancer-frame-viewer/DancerFrameViewerController.svelte';
+	import FluxImageGeneratorController from '$lib/windows/flux-image-generator/FluxImageGeneratorController.svelte';
+	import EditedImagesViewerController from '$lib/windows/edited-images-viewer/EditedImagesViewerController.svelte';
+	import AllImagesGalleryController from '$lib/windows/all-images-gallery/AllImagesGalleryController.svelte';
+	import GeneratedGifsViewerController from '$lib/windows/generated-gifs-viewer/GeneratedGifsViewerController.svelte';
+	import AboutController from '$lib/windows/about/AboutController.svelte';
+	import TaskManagerController from '$lib/windows/task-manager/TaskManagerController.svelte';
+	import GoodMorningPaulController from '$lib/windows/good-morning-paul/GoodMorningPaulController.svelte';
 	import { onMount } from 'svelte';
 
 	let isLoading = $state(false);
@@ -38,7 +41,7 @@
 				isLoading = true;
 				loadingStage = 'Starting generation...';
 				progress = 0;
-				
+
 				// Create loading window
 				currentGenerationWindowId = `generation-${Date.now()}`;
 				windowManager.createWindow({
@@ -64,7 +67,7 @@
 				console.log('Currently executing node:', message.data);
 				loadingStage = 'Rubbing dancer...';
 				progress = 25;
-				
+
 				// Update loading window
 				if (currentGenerationWindowId) {
 					const loadingStageEl = document.getElementById('loading-stage');
@@ -78,7 +81,7 @@
 				if (message.data.value && message.data.max) {
 					progress = Math.round((message.data.value / message.data.max) * 100);
 					loadingStage = `Generating... ${progress}%`;
-					
+
 					// Update loading window
 					if (currentGenerationWindowId) {
 						const loadingStageEl = document.getElementById('loading-stage');
@@ -92,7 +95,7 @@
 				console.log('Node executed:', message.data);
 				loadingStage = 'Finalizing...';
 				progress = 90;
-				
+
 				// Update loading window
 				if (currentGenerationWindowId) {
 					const loadingStageEl = document.getElementById('loading-stage');
@@ -100,7 +103,7 @@
 					if (loadingStageEl) loadingStageEl.textContent = 'Finalizing...';
 					if (progressBarEl) progressBarEl.style.width = '90%';
 				}
-				
+
 				const output = message.data.output;
 				if (output.gifs) {
 					const gifs = output.gifs;
@@ -108,17 +111,17 @@
 					const subfolder = gifs[0].subfolder;
 					const type = gifs[0].type;
 					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
-					
+
 					// Replace loading window content with the GIF FIRST
 					if (currentGenerationWindowId) {
 						windowManager.updateWindowContent(currentGenerationWindowId, {
-                            height: 400,
+							height: 400,
 							title: `Here you go paul`,
 							content: {
 								component: GifDisplay,
 								props: {
 									gifUrl: url,
-									alt: "Generated GIF"
+									alt: 'Generated GIF'
 								}
 							}
 						});
@@ -138,7 +141,7 @@
 						.catch((error) => {
 							console.error('Failed to extract and save first frame:', error);
 						});
-					
+
 					// Still set testImg for any other usage
 					if (testImg) {
 						testImg.src = url;
@@ -149,7 +152,7 @@
 					const subfolder = images[0].subfolder;
 					const type = images[0].type;
 					const url = `${fetchUrl}/api/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
-					
+
 					// Replace loading window content with the generated image
 					if (currentGenerationWindowId) {
 						windowManager.updateWindowContent(currentGenerationWindowId, {
@@ -159,21 +162,22 @@
 								component: ImageDisplay,
 								props: {
 									imageUrl: url,
-									alt: "Generated Image"
+									alt: 'Generated Image'
 								}
 							}
 						});
 					}
 
 					// Save the edited image to the user store (for Flux-generated images)
-					userStore.addEditedImage(url, `Generated image: ${filename}`)
+					userStore
+						.addEditedImage(url, `Generated image: ${filename}`)
 						.then((imageId) => {
 							console.log('Edited image saved to user store:', imageId);
 						})
 						.catch((error) => {
 							console.error('Failed to save edited image:', error);
 						});
-					
+
 					// Still set testImg for any other usage
 					if (testImg) {
 						testImg.src = url;
@@ -195,7 +199,7 @@
 				isLoading = false;
 				loadingStage = 'Generation failed';
 				progress = 0;
-				
+
 				// Close loading window on error
 				if (currentGenerationWindowId) {
 					windowManager.closeWindow(currentGenerationWindowId);
@@ -225,21 +229,21 @@
 			// Create a canvas to draw the first frame
 			const canvas = document.createElement('canvas');
 			const ctx = canvas.getContext('2d');
-			
+
 			// Create an image element to load the GIF
 			const img = new Image();
 			img.crossOrigin = 'anonymous';
-			
+
 			return new Promise((resolve, reject) => {
 				img.onload = () => {
 					try {
 						// Set canvas size to match the image
 						canvas.width = img.naturalWidth;
 						canvas.height = img.naturalHeight;
-						
+
 						// Draw the first frame (this will be the first frame of the GIF)
 						ctx.drawImage(img, 0, 0);
-						
+
 						// Convert to blob
 						canvas.toBlob((blob) => {
 							if (blob) {
@@ -253,11 +257,11 @@
 						reject(error);
 					}
 				};
-				
+
 				img.onerror = () => {
 					reject(new Error('Failed to load GIF image'));
 				};
-				
+
 				img.src = gifUrl;
 			});
 		} catch (error) {
@@ -268,137 +272,47 @@
 
 	onMount(() => {
 		// Register all window creators for persistence
-		windowManager.registerWindowCreator('notepad', openNotepad);
-		windowManager.registerWindowCreator('calculator', openCalculator);
-		windowManager.registerWindowCreator('about', openAbout);
-		windowManager.registerWindowCreator('taskbar-window', openTaskbar);
-		windowManager.registerWindowCreator('cinco-identity-generator', openCincoIdentityGenerator);
-		windowManager.registerWindowCreator('good-morning-paul', goodMorningPaul);
-		windowManager.registerWindowCreator('camera', openCamera);
-		windowManager.registerWindowCreator('speech-transcriber', openSpeechTranscriber);
-		windowManager.registerWindowCreator('dancer-frame-viewer', () => openDancerFrameViewer(true));
-		windowManager.registerWindowCreator('flux-image-generator', openFluxImageGenerator);
-		windowManager.registerWindowCreator('edited-images-viewer', openEditedImagesViewer);
-		windowManager.registerWindowCreator('all-images-gallery', openAllImagesGallery);
-		windowManager.registerWindowCreator('generated-gifs-viewer', openGeneratedGifsViewer);
+		// All window creators are now registered in their respective controllers
 
 		// Load saved window state
 		windowManager.loadWindowState();
 
 		websocketClient.connect();
 		websocketClient.setMessageHandler(handleWebSocketMessage);
-		
+
 		// Update status initially
 		updateWebSocketStatus();
-		
+
 		// Poll status every 500ms for reactive updates
 		const statusInterval = setInterval(updateWebSocketStatus, 500);
-		
+
 		return () => {
 			clearInterval(statusInterval);
 		};
 	});
-	function openNotepad() {
-		windowManager.createWindow({
-			id: 'notepad',
-			title: 'Untitled - Notepad',
-			width: 500,
-			height: 400,
-			x: 150,
-			y: 100,
-			content: `
-				<div style="background: white; padding: 8px; height: 100%; border: 1px inset #c0c0c0;">
-					<textarea 
-						style="width: 100%; height: 100%; border: none; outline: none; font-family: 'Courier New', monospace; font-size: 12px; resize: none;"
-						placeholder="Type your text here..."
-					></textarea>
-				</div>
-			`
-		});
-	}
+	// function openNotepad() {
+	// 	windowManager.createWindow({
+	// 		id: 'notepad',
+	// 		title: 'Untitled - Notepad',
+	// 		width: 500,
+	// 		height: 400,
+	// 		x: 150,
+	// 		y: 100,
+	// 		content: `
+	// 			<div style="background: white; padding: 8px; height: 100%; border: 1px inset #c0c0c0;">
+	// 				<textarea
+	// 					style="width: 100%; height: 100%; border: none; outline: none; font-family: 'Courier New', monospace; font-size: 12px; resize: none;"
+	// 					placeholder="Type your text here..."
+	// 				></textarea>
+	// 			</div>
+	// 		`
+	// 	});
+	// }
 
-	function openCalculator() {
-		windowManager.createWindow({
-			id: 'calculator',
-			title: 'Calculator',
-			width: 200,
-			height: 250,
-			x: 200,
-			y: 150,
-			content: {
-				component: Calculator,
-				props: {}
-			}
-		});
-	}
 
-	function openAbout() {
-		windowManager.createWindow({
-			id: 'about',
-			title: 'About Windows 95',
-			width: 350,
-			height: 200,
-			x: 250,
-			y: 200,
-			content: `
-				<div style="background: white; padding: 12px; display: flex; align-items: center; gap: 12px;">
-					<div style="font-size: 48px;">🖥️</div>
-					<div>
-						<h3 style="margin: 0 0 8px 0; font-size: 14px;">Windows 95 Experience</h3>
-						<p style="margin: 0; font-size: 11px; color: #666;">A nostalgic recreation of the classic Windows 95 interface.</p>
-						<p style="margin: 8px 0 0 0; font-size: 11px; color: #666;">Built with Svelte and love for retro computing.</p>
-					</div>
-				</div>
-			`
-		});
-	}
 
-	function openTaskbar() {
-		windowManager.createWindow({
-			id: 'taskbar-window',
-			title: 'Window Manager',
-			width: 300,
-			height: 200,
-			x: 300,
-			y: 250,
-			content: `
-				<div style="background: white; padding: 8px;">
-					<h4 style="margin: 0 0 8px 0;">Open Windows:</h4>
-					<div id="window-list" style="font-size: 11px;"></div>
-				</div>
-			`
-		});
-	}
 
-	function openCincoIdentityGenerator() {
-		windowManager.createWindow({
-			id: 'cinco-identity-generator',
-			title: 'Cinco Identity Generator',
-			width: 500,
-			height: 360,
-			x: 300,
-			y: 250,
-			content: {
-				component: CincoIdentityGenerator,
-				props: {}
-			}
-		});
-	}
 
-	function goodMorningPaul() {
-		windowManager.createWindow({
-			id: 'good-morning-paul',
-			title: `Paul's computer`,
-			width: 400,
-			height: 300,
-			x: 100,
-			y: 550,
-			content: {
-				component: GoodMorningPaul,
-				props: {}
-			}
-		});
-	}
 
 	/** @param {number} n */
 	function danceWindow(n) {
@@ -414,125 +328,18 @@
 		});
 	}
 
-	function openCamera() {
-		windowManager.createWindow({
-			id: 'camera',
-			title: 'Camera',
-			width: 500,
-			height: 400,
-			x: 200,
-			y: 100,
-			content: {
-				component: Camera,
-				props: {}
-			}
-		});
-	}
 
-	function openSpeechTranscriber() {
-		windowManager.createWindow({
-			id: 'speech-transcriber',
-			title: 'Speech Transcriber',
-			width: 450,
-			height: 500,
-			x: 250,
-			y: 50,
-			content: {
-				component: SpeechTranscriber,
-				props: {}
-			}
-		});
-	}
 
-	function openDancerFrameViewer(force = false) {
-		if (!force && !userStore.hasDancerFrame) {
-			alert('No dancer frame saved. Generate a dancer first to save a frame.');
-			return;
-		}
 
-		windowManager.createWindow({
-			id: 'dancer-frame-viewer',
-			title: 'Saved Dancer Frame',
-			width: 450,
-			height: 500,
-			x: 300,
-			y: 100,
-			content: {
-				component: DancerFrameViewer,
-				props: {
-					frameDataUrl: userStore.dancerFrameDataUrl,
-					timestamp: userStore.dancerFrameTimestamp,
-					originalGifUrl: userStore.dancerFrameGifUrl
-				}
-			}
-		});
-	}
 
-	function openFluxImageGenerator() {
-		windowManager.createWindow({
-			id: 'flux-image-generator',
-			title: 'Flux Image Generator',
-			width: 500,
-			height: 600,
-			x: 350,
-			y: 50,
-			content: {
-				component: FluxImageGenerator,
-				props: {}
-			}
-		});
-	}
 
-	function openEditedImagesViewer() {
-		windowManager.createWindow({
-			id: 'edited-images-viewer',
-			title: 'Edited Images Gallery',
-			width: 600,
-			height: 500,
-			x: 250,
-			y: 100,
-			content: {
-				component: EditedImagesViewer,
-				props: {}
-			}
-		});
-	}
 
-	function openAllImagesGallery() {
-		windowManager.createWindow({
-			id: 'all-images-gallery',
-			title: 'All Saved Images',
-			width: 800,
-			height: 600,
-			x: 200,
-			y: 50,
-			content: {
-				component: AllImagesGallery,
-				props: {}
-			}
-		});
-	}
-
-	function openGeneratedGifsViewer() {
-		windowManager.createWindow({
-			id: 'generated-gifs-viewer',
-			title: 'Generated GIFs Gallery',
-			width: 800,
-			height: 600,
-			x: 250,
-			y: 100,
-			content: {
-				component: GeneratedGifsViewer,
-				props: {}
-			}
-		});
-	}
 
 	function clearWindowState() {
 		if (confirm('Clear all saved window positions and close all windows?')) {
 			// Close all windows first
 			const windowsToClose = [...windowManager.windows];
-			windowsToClose.forEach(window => {
+			windowsToClose.forEach((window) => {
 				windowManager.closeWindow(window.id);
 			});
 			// Clear the saved state
@@ -544,77 +351,96 @@
 
 <div class="desktop">
 	<div class="desktop-icons">
-		<div class="icon" onclick={openSpeechTranscriber}>
-			<div class="icon-image">🎤</div>
-			<div class="icon-label">Speech Transcriber</div>
-		</div>
-		<div class="icon" onclick={openCamera}>
-			<div class="icon-image">📹</div>
-			<div class="icon-label">Camera</div>
-		</div>
-		<div class="icon" onclick={() => danceWindow(1)}>
-			<div class="icon-image">🕺</div>
-			<div class="icon-label">Dance</div>
-		</div>
-		<!-- <div class="icon" onclick={goodMorningPaul}>
-			<div class="icon-image">👋</div>
-			<div class="icon-label">Good Morning Paul</div>
-		</div> -->
+		{#snippet desktopIcon(/** @type {{onClick:() => void, icon:string, label:string }} */ p)}
+			<div class="icon" onclick={p.onClick}>
+				<div class="icon-image">{p.icon}</div>
+				<div class="icon-label">{p.label}</div>
+			</div>
+		{/snippet}
 
-		<div class="icon" onclick={openCincoIdentityGenerator}>
-			<div class="icon-image">👤</div>
-			<div class="icon-label">Cinco Identity Generator</div>
-		</div>
+		{@render desktopIcon({
+			onClick: NotepadController.openNotepad,
+			icon: '📝',
+			label: 'Notepad'
+		})}
 
-		<div class="icon" onclick={openDancerFrameViewer}>
-			<div class="icon-image">🖼️</div>
-			<div class="icon-label">Dancer Frame</div>
-		</div>
+		{@render desktopIcon({
+			onClick: SpeechTranscriberController.openSpeechTranscriber,
+			icon: '🎤',
+			label: 'Speech Transcriber'
+		})}
 
-		<div class="icon" onclick={openFluxImageGenerator}>
-			<div class="icon-image">🎨</div>
-			<div class="icon-label">Flux Generator</div>
-		</div>
+		{@render desktopIcon({
+			onClick: CameraController.openCamera,
+			icon: '📹',
+			label: 'Camera'
+		})}
 
-		<div class="icon" onclick={openEditedImagesViewer}>
-			<div class="icon-image">🖼️</div>
-			<div class="icon-label">Edited Images</div>
-		</div>
+		{@render desktopIcon({
+			onClick: () => danceWindow(1),
+			icon: '🕺',
+			label: 'Dance'
+		})}
 
-		<div class="icon" onclick={openAllImagesGallery}>
-			<div class="icon-image">📁</div>
-			<div class="icon-label">All Images</div>
-		</div>
+		{@render desktopIcon({
+			onClick: CincoIdentityGeneratorController.openCincoIdentityGenerator,
+			icon: '👤',
+			label: 'Cinco Identity Generator'
+		})}
 
-		<div class="icon" onclick={openGeneratedGifsViewer}>
-			<div class="icon-image">🎬</div>
-			<div class="icon-label">Generated GIFs</div>
-		</div>
+		{@render desktopIcon({
+			onClick: DancerFrameViewerController.openDancerFrameViewer,
+			icon: '🖼️',
+			label: 'Dancer Frame'
+		})}
 
-		<div class="icon" onclick={openNotepad}>
-			<div class="icon-image">📝</div>
-			<div class="icon-label">Notepad</div>
-		</div>
+		{@render desktopIcon({
+			onClick: FluxImageGeneratorController.openFluxImageGenerator,
+			icon: '🎨',
+			label: 'Flux Generator'
+		})}
 
-		<div class="icon" onclick={openCalculator}>
-			<div class="icon-image">🧮</div>
-			<div class="icon-label">Calculator</div>
-		</div>
+		{@render desktopIcon({
+			onClick: EditedImagesViewerController.openEditedImagesViewer,
+			icon: '🖼️',
+			label: 'Edited Images'
+		})}
 
-		<div class="icon" onclick={openAbout}>
-			<div class="icon-image">ℹ️</div>
-			<div class="icon-label">About</div>
-		</div>
+		{@render desktopIcon({
+			onClick: AllImagesGalleryController.openAllImagesGallery,
+			icon: '📁',
+			label: 'All Images'
+		})}
 
-		<div class="icon" onclick={openTaskbar}>
-			<div class="icon-image">📋</div>
-			<div class="icon-label">Task Manager</div>
-		</div>
+		{@render desktopIcon({
+			onClick: GeneratedGifsViewerController.openGeneratedGifsViewer,
+			icon: '🎬',
+			label: 'Generated GIFs'
+		})}
 
-		<div class="icon" onclick={clearWindowState}>
-			<div class="icon-image">🔄</div>
-			<div class="icon-label">Reset Windows</div>
-		</div>
+		{@render desktopIcon({
+			onClick: CalculatorController.openCalculator,
+			icon: '🧮',
+			label: 'Calculator'
+		})}
+
+		{@render desktopIcon({
+			onClick: AboutController.openAbout,
+			icon: 'ℹ️',
+			label: 'About'
+		})}
+
+		{@render desktopIcon({
+			onClick: TaskManagerController.openTaskbar,
+			icon: '📋',
+			label: 'Task Manager'
+		})}
+
+		{@render desktopIcon({
+			onClick: clearWindowState,
+			icon: '🔄',
+			label: 'Reset Windows'
+		})}
 	</div>
 
 	<div class="taskbar">
@@ -645,7 +471,13 @@
 	<!-- WebSocket Status Bar -->
 	<div class="websocket-status-bar">
 		<div class="status-indicator">
-			<span class="status-icon" class:connected={websocketStatus === 'connected'} class:connecting={websocketStatus === 'connecting'} class:disconnected={websocketStatus === 'disconnected'} class:error={websocketStatus === 'error'}>
+			<span
+				class="status-icon"
+				class:connected={websocketStatus === 'connected'}
+				class:connecting={websocketStatus === 'connecting'}
+				class:disconnected={websocketStatus === 'disconnected'}
+				class:error={websocketStatus === 'error'}
+			>
 				{#if websocketStatus === 'connected'}
 					🟢
 				{:else if websocketStatus === 'connecting'}
@@ -664,9 +496,7 @@
 		</div>
 		<div class="status-controls">
 			{#if websocketStatus === 'failed' || websocketStatus === 'error' || websocketStatus === 'disconnected'}
-				<button class="reconnect-btn" onclick={retryConnection}>
-					🔄 Retry
-				</button>
+				<button class="reconnect-btn" onclick={retryConnection}> 🔄 Retry </button>
 			{/if}
 			{#if websocketClientId}
 				<div class="client-id">
@@ -846,13 +676,24 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.5; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
 	}
 
 	@keyframes blink {
-		0%, 50% { opacity: 1; }
-		51%, 100% { opacity: 0.3; }
+		0%,
+		50% {
+			opacity: 1;
+		}
+		51%,
+		100% {
+			opacity: 0.3;
+		}
 	}
 
 	.status-text {
